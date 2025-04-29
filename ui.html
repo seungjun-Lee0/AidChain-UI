@@ -1,0 +1,1530 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Blockchain Aid Distribution System</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/web3/1.8.2/web3.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.2.3/js/bootstrap.bundle.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.2.3/css/bootstrap.min.css">
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            padding-top: 20px;
+            background-color: #f8f9fa;
+        }
+        .container {
+            background-color: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+        .card {
+            margin-bottom: 20px;
+            border: none;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+        .card-header {
+            background-color: #4a89dc;
+            color: white;
+            font-weight: bold;
+        }
+        .btn-primary {
+            background-color: #4a89dc;
+            border-color: #4a89dc;
+        }
+        .btn-success {
+            background-color: #37bc9b;
+            border-color: #37bc9b;
+        }
+        .btn-info {
+            background-color: #3bafda;
+            border-color: #3bafda;
+        }
+        .btn-warning {
+            background-color: #f6bb42;
+            border-color: #f6bb42;
+        }
+        .btn-danger {
+            background-color: #da4453;
+            border-color: #da4453;
+        }
+        .form-control:focus {
+            border-color: #4a89dc;
+            box-shadow: 0 0 0 0.25rem rgba(74, 137, 220, 0.25);
+        }
+        .nav-tabs .nav-link.active {
+            border-bottom: 3px solid #4a89dc;
+            font-weight: bold;
+        }
+        .alert {
+            margin-top: 10px;
+        }
+        #statusContainer div {
+            margin-bottom: 10px;
+            padding: 10px;
+            border-radius: 5px;
+        }
+        .address-display {
+            font-family: monospace;
+            background-color: #f8f9fa;
+            padding: 5px;
+            border-radius: 3px;
+            word-break: break-all;
+        }
+        .table td, .table th {
+            vertical-align: middle;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="text-center mb-4">Blockchain Aid Distribution System</h1>
+        
+        <div class="alert alert-primary" role="alert">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <strong>Connected Account:</strong> <span id="userAccount" class="address-display">Not connected</span>
+                </div>
+                <button id="connectWallet" class="btn btn-primary">Connect Wallet</button>
+            </div>
+        </div>
+
+        <ul class="nav nav-tabs" id="myTab" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="contracts-tab" data-bs-toggle="tab" data-bs-target="#contracts" type="button" role="tab" aria-controls="contracts" aria-selected="true">Contract Setup</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="registration-tab" data-bs-toggle="tab" data-bs-target="#registration" type="button" role="tab" aria-controls="registration" aria-selected="false">DID Registration</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="donation-tab" data-bs-toggle="tab" data-bs-target="#donation" type="button" role="tab" aria-controls="donation" aria-selected="false">Donation</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="assignment-tab" data-bs-toggle="tab" data-bs-target="#assignment" type="button" role="tab" aria-controls="assignment" aria-selected="false">Token Assignment</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="tracking-tab" data-bs-toggle="tab" data-bs-target="#tracking" type="button" role="tab" aria-controls="tracking" aria-selected="false">Aid Tracking</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="status-tab" data-bs-toggle="tab" data-bs-target="#status" type="button" role="tab" aria-controls="status" aria-selected="false">System Status</button>
+            </li>
+        </ul>
+        
+        <div class="tab-content mt-3" id="myTabContent">
+            <!-- Contract Setup Tab -->
+            <div class="tab-pane fade show active" id="contracts" role="tabpanel" aria-labelledby="contracts-tab">
+                <div class="card">
+                    <div class="card-header">Deploy Contracts</div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <h5>Step 1: Deploy DIDRegistry</h5>
+                            <button id="deployDIDRegistry" class="btn btn-primary">Deploy DIDRegistry</button>
+                            <div id="didRegistryAddress" class="mt-2"></div>
+                        </div>
+                        <hr>
+                        <div class="mb-3">
+                            <h5>Step 2: Deploy AidToken</h5>
+                            <div class="mb-3">
+                                <label for="reliefAgencyAddress" class="form-label">Relief Agency Address:</label>
+                                <input type="text" id="reliefAgencyAddress" class="form-control" placeholder="Enter relief agency address">
+                            </div>
+                            <div class="mb-3">
+                                <label for="didRegistryAddressInput" class="form-label">DIDRegistry Address:</label>
+                                <input type="text" id="didRegistryAddressInput" class="form-control" placeholder="Enter DIDRegistry contract address">
+                            </div>
+                            <button id="deployAidToken" class="btn btn-primary">Deploy AidToken</button>
+                            <div id="aidTokenAddress" class="mt-2"></div>
+                        </div>
+                        <hr>
+                        <div class="mb-3">
+                            <h5>Step 3: Deploy AidTokenHandler</h5>
+                            <div class="mb-3">
+                                <label for="aidTokenAddressInput" class="form-label">AidToken Address:</label>
+                                <input type="text" id="aidTokenAddressInput" class="form-control" placeholder="Enter AidToken contract address">
+                            </div>
+                            <button id="deployAidTokenHandler" class="btn btn-primary">Deploy AidTokenHandler</button>
+                            <div id="aidTokenHandlerAddress" class="mt-2"></div>
+                        </div>
+                        <hr>
+                        <div class="mb-3">
+                            <h5>Connect to Existing Contracts</h5>
+                            <div class="row g-3">
+                                <div class="col-md-4">
+                                    <label for="existingDIDRegistry" class="form-label">DIDRegistry:</label>
+                                    <input type="text" id="existingDIDRegistry" class="form-control" placeholder="Enter contract address">
+                                </div>
+                                <div class="col-md-4">
+                                    <label for="existingAidToken" class="form-label">AidToken:</label>
+                                    <input type="text" id="existingAidToken" class="form-control" placeholder="Enter contract address">
+                                </div>
+                                <div class="col-md-4">
+                                    <label for="existingAidTokenHandler" class="form-label">AidTokenHandler:</label>
+                                    <input type="text" id="existingAidTokenHandler" class="form-control" placeholder="Enter contract address">
+                                </div>
+                            </div>
+                            <button id="connectToContracts" class="btn btn-success mt-3">Connect to Contracts</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- DID Registration Tab -->
+            <div class="tab-pane fade" id="registration" role="tabpanel" aria-labelledby="registration-tab">
+                <div class="card">
+                    <div class="card-header">Register Decentralized Identity (DID)</div>
+                    <div class="card-body">
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="didAddress" class="form-label">Address to Register:</label>
+                                <input type="text" id="didAddress" class="form-control" placeholder="Enter address to register">
+                            </div>
+                            <div class="col-md-6">
+                                <label for="didLocation" class="form-label">Location:</label>
+                                <input type="text" id="didLocation" class="form-control" placeholder="Enter location (e.g., Fiji, PNG)">
+                            </div>
+                        </div>
+                        <div class="d-flex gap-2">
+                            <button id="registerTransporter" class="btn btn-primary">Register as Transporter</button>
+                            <button id="registerGroundRelief" class="btn btn-info">Register as Ground Relief</button>
+                            <button id="registerRecipient" class="btn btn-success">Register as Recipient</button>
+                        </div>
+                        
+                        <hr>
+                        
+                        <h5>Check Role and DID Information</h5>
+                        <div class="mb-3">
+                            <label for="checkAddressRole" class="form-label">Check Address:</label>
+                            <input type="text" id="checkAddressRole" class="form-control" placeholder="Enter address to check">
+                            <button id="checkRole" class="btn btn-secondary mt-2">Check Role</button>
+                        </div>
+                        <div id="roleResult" class="alert alert-info" style="display: none;"></div>
+                        
+                        <hr>
+                        
+                        <h5>View All Registered Users</h5>
+                        <div class="d-flex gap-2 mb-3">
+                            <button id="viewTransporters" class="btn btn-outline-primary">View Transporters</button>
+                            <button id="viewGroundRelief" class="btn btn-outline-info">View Ground Relief</button>
+                            <button id="viewRecipients" class="btn btn-outline-success">View Recipients</button>
+                        </div>
+                        <div class="table-responsive">
+                            <table id="registeredUsersTable" class="table table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>Type</th>
+                                        <th>Address</th>
+                                        <th>Location</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <!-- Data will be populated by JavaScript -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Donation Tab -->
+            <div class="tab-pane fade" id="donation" role="tabpanel" aria-labelledby="donation-tab">
+                <div class="card">
+                    <div class="card-header">Make a Donation</div>
+                    <div class="card-body">
+                        <div class="alert alert-info">
+                            <strong>Minimum Donation:</strong> <span id="minDonation">0.013 ETH (~$20)</span><br>
+                            <strong>Donation Threshold for Token:</strong> <span id="donationThreshold">0.32 ETH (~$500)</span>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="donationAmount" class="form-label">Donation Amount (ETH):</label>
+                            <input type="number" id="donationAmount" class="form-control" min="0.013" step="0.001" placeholder="Enter amount in ETH">
+                        </div>
+                        <button id="makeDonation" class="btn btn-success">Make Donation</button>
+                        
+                        <hr>
+                        
+                        <h5>Your Donation Balance</h5>
+                        <button id="checkBalance" class="btn btn-info">Check My Balance</button>
+                        <div id="donorBalance" class="alert alert-success mt-2" style="display: none;"></div>
+                        
+                        <hr>
+                        
+                        <h5>Current Token Status</h5>
+                        <button id="checkTokenStatus" class="btn btn-info">Check Token Status</button>
+                        <div class="mt-3">
+                            <div><strong>Token ID Counter:</strong> <span id="tokenIdCounter">-</span></div>
+                            <div><strong>Current Token Balance:</strong> <span id="currentTokenBalance">-</span></div>
+                            <div><strong>Progress to Next Token:</strong></div>
+                            <div class="progress mt-2">
+                                <div id="tokenProgress" class="progress-bar" role="progressbar" style="width: 0%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">0%</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Token Assignment Tab -->
+            <div class="tab-pane fade" id="assignment" role="tabpanel" aria-labelledby="assignment-tab">
+                <div class="card">
+                    <div class="card-header">Assign Aid Recipients to Token</div>
+                    <div class="card-body">
+                        <div class="alert alert-warning">
+                            <strong>Note:</strong> Only the Relief Agency can assign recipients to tokens.
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="tokenIdAssign" class="form-label">Token ID:</label>
+                            <input type="number" id="tokenIdAssign" class="form-control" min="0" step="1" placeholder="Enter token ID">
+                        </div>
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="transferTeamAddress" class="form-label">Transfer Team Address:</label>
+                                <input type="text" id="transferTeamAddress" class="form-control" placeholder="Enter transporter address">
+                            </div>
+                            <div class="col-md-6">
+                                <button id="selectTransporterBtn" class="btn btn-outline-primary mt-4">Select from Registered</button>
+                            </div>
+                        </div>
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="groundReliefAddress" class="form-label">Ground Relief Address:</label>
+                                <input type="text" id="groundReliefAddress" class="form-control" placeholder="Enter ground relief address">
+                            </div>
+                            <div class="col-md-6">
+                                <button id="selectGroundReliefBtn" class="btn btn-outline-info mt-4">Select from Registered</button>
+                            </div>
+                        </div>
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="recipientAddress" class="form-label">Recipient Address:</label>
+                                <input type="text" id="recipientAddress" class="form-control" placeholder="Enter recipient address">
+                            </div>
+                            <div class="col-md-6">
+                                <button id="selectRecipientBtn" class="btn btn-outline-success mt-4">Select from Registered</button>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="locationAssign" class="form-label">Location:</label>
+                            <input type="text" id="locationAssign" class="form-control" placeholder="Enter location (must match registered locations)">
+                        </div>
+                        
+                        <button id="assignRecipients" class="btn btn-primary">Assign Recipients</button>
+                        
+                        <hr>
+                        
+                        <h5>Check Assignment Status</h5>
+                        <div class="mb-3">
+                            <label for="tokenIdCheck" class="form-label">Token ID:</label>
+                            <input type="number" id="tokenIdCheck" class="form-control" min="0" step="1" placeholder="Enter token ID">
+                            <button id="checkAssignment" class="btn btn-info mt-2">Check Assignment</button>
+                        </div>
+                        <div id="assignmentStatus" class="alert alert-info mt-2" style="display: none;"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Aid Tracking Tab -->
+            <div class="tab-pane fade" id="tracking" role="tabpanel" aria-labelledby="tracking-tab">
+                <div class="card">
+                    <div class="card-header">Track and Update Aid Status</div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label for="tokenIdTracking" class="form-label">Token ID:</label>
+                            <input type="number" id="tokenIdTracking" class="form-control" min="0" step="1" placeholder="Enter token ID">
+                            <button id="checkAidStatus" class="btn btn-info mt-2">Check Status</button>
+                        </div>
+                        
+                        <div id="aidStatusResult" class="alert alert-info mt-2" style="display: none;"></div>
+                        
+                        <hr>
+                        
+                        <h5>Update Aid Status</h5>
+                        <div class="alert alert-warning">
+                            <strong>Note:</strong> You must be the assigned stakeholder to update the status.
+                        </div>
+                        
+                        <div class="d-grid gap-2">
+                            <button id="markInTransit" class="btn btn-primary">Mark as In Transit (Transporter Only)</button>
+                            <button id="markDelivered" class="btn btn-info">Mark as Delivered (Ground Relief Only)</button>
+                            <button id="markClaimed" class="btn btn-success">Mark as Claimed (Recipient Only)</button>
+                        </div>
+                        
+                        <hr>
+                        
+                        <h5>Aid Journey Visualization</h5>
+                        <div id="aidJourney" class="mt-3">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div class="text-center">
+                                    <div id="issuedStep" class="rounded-circle bg-secondary text-white" style="width: 50px; height: 50px; display: flex; align-items: center; justify-content: center;">1</div>
+                                    <div>Issued</div>
+                                </div>
+                                <div class="bg-secondary" style="height: 2px; flex-grow: 1;"></div>
+                                <div class="text-center">
+                                    <div id="inTransitStep" class="rounded-circle bg-secondary text-white" style="width: 50px; height: 50px; display: flex; align-items: center; justify-content: center;">2</div>
+                                    <div>In Transit</div>
+                                </div>
+                                <div class="bg-secondary" style="height: 2px; flex-grow: 1;"></div>
+                                <div class="text-center">
+                                    <div id="deliveredStep" class="rounded-circle bg-secondary text-white" style="width: 50px; height: 50px; display: flex; align-items: center; justify-content: center;">3</div>
+                                    <div>Delivered</div>
+                                </div>
+                                <div class="bg-secondary" style="height: 2px; flex-grow: 1;"></div>
+                                <div class="text-center">
+                                    <div id="claimedStep" class="rounded-circle bg-secondary text-white" style="width: 50px; height: 50px; display: flex; align-items: center; justify-content: center;">4</div>
+                                    <div>Claimed</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- System Status Tab -->
+            <div class="tab-pane fade" id="status" role="tabpanel" aria-labelledby="status-tab">
+                <div class="card">
+                    <div class="card-header">System Status</div>
+                    <div class="card-body">
+                        <h5>Contract Information</h5>
+                        <div class="mb-3">
+                            <div><strong>DIDRegistry Address:</strong> <span id="statusDIDRegistry" class="address-display">Not connected</span></div>
+                            <div><strong>AidToken Address:</strong> <span id="statusAidToken" class="address-display">Not connected</span></div>
+                            <div><strong>AidTokenHandler Address:</strong> <span id="statusAidTokenHandler" class="address-display">Not connected</span></div>
+                        </div>
+                        
+                        <hr>
+                        
+                        <h5>AidToken Contract Information</h5>
+                        <button id="refreshStatus" class="btn btn-info mb-3">Refresh Status</button>
+                        <div class="mb-3">
+                            <div><strong>Relief Agency:</strong> <span id="reliefAgency" class="address-display">-</span></div>
+                            <div><strong>Donation Threshold:</strong> <span id="statusDonationThreshold">-</span></div>
+                            <div><strong>Minimum Donation:</strong> <span id="statusMinDonation">-</span></div>
+                            <div><strong>Total Tokens Issued:</strong> <span id="statusTokenCounter">-</span></div>
+                        </div>
+                        
+                        <hr>
+                        
+                        <h5>System Events</h5>
+                        <button id="fetchEvents" class="btn btn-primary mb-3">Fetch Recent Events</button>
+                        <div class="table-responsive">
+                            <table id="eventsTable" class="table table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>Event Type</th>
+                                        <th>Token ID</th>
+                                        <th>Actor</th>
+                                        <th>Details</th>
+                                        <th>Block</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <!-- Events will be populated by JavaScript -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Selection Modal -->
+    <div class="modal fade" id="selectionModal" tabindex="-1" aria-labelledby="selectionModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="selectionModalLabel">Select Address</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="table-responsive">
+                        <table id="modalSelectionTable" class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Address</th>
+                                    <th>Location</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- Will be populated by JavaScript -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Notifications -->
+    <div id="notificationContainer" style="position: fixed; bottom: 20px; right: 20px; max-width: 350px; z-index: 1050;">
+        <!-- Notifications will be added here by JavaScript -->
+    </div>
+
+    <script>
+        // Contract ABIs will be added here
+        const didRegistryABI = [
+            // DIDRegistry ABI will be placed here
+            {"inputs":[{"internalType":"address","name":"user","type":"address"},{"internalType":"string","name":"location","type":"string"}],"name":"registerTransporterDID","outputs":[],"stateMutability":"nonpayable","type":"function"},
+            {"inputs":[{"internalType":"address","name":"user","type":"address"},{"internalType":"string","name":"location","type":"string"}],"name":"registerGroundReliefDID","outputs":[],"stateMutability":"nonpayable","type":"function"},
+            {"inputs":[{"internalType":"address","name":"user","type":"address"},{"internalType":"string","name":"location","type":"string"}],"name":"registerRecipientDID","outputs":[],"stateMutability":"nonpayable","type":"function"},
+            {"inputs":[{"internalType":"address","name":"user","type":"address"}],"name":"getRole","outputs":[{"internalType":"enum DIDRegistry.Role","name":"","type":"uint8"}],"stateMutability":"view","type":"function"},
+            {"inputs":[{"internalType":"address","name":"user","type":"address"}],"name":"getLocation","outputs":[{"internalType":"string","name":"","type":"string"}],"stateMutability":"view","type":"function"},
+            {"inputs":[],"name":"getAllTransporters","outputs":[{"internalType":"address[]","name":"","type":"address[]"}],"stateMutability":"view","type":"function"},
+            {"inputs":[],"name":"getAllGroundRelief","outputs":[{"internalType":"address[]","name":"","type":"address[]"}],"stateMutability":"view","type":"function"},
+            {"inputs":[],"name":"getAllRecipients","outputs":[{"internalType":"address[]","name":"","type":"address[]"}],"stateMutability":"view","type":"function"},
+            {"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"dids","outputs":[{"internalType":"string","name":"did","type":"string"},{"internalType":"enum DIDRegistry.Role","name":"role","type":"uint8"},{"internalType":"string","name":"location","type":"string"}],"stateMutability":"view","type":"function"}
+        ];
+        
+        const aidTokenABI = [
+            // AidToken ABI will be placed here
+            {"inputs":[{"internalType":"address","name":"_reliefAgency","type":"address"},{"internalType":"address","name":"_didRegistry","type":"address"}],"stateMutability":"nonpayable","type":"constructor"},
+            {"inputs":[],"name":"donate","outputs":[],"stateMutability":"payable","type":"function"},
+            {"inputs":[{"internalType":"uint256","name":"tokenId","type":"uint256"},{"internalType":"address","name":"transferAddress","type":"address"},{"internalType":"address","name":"groundAddress","type":"address"},{"internalType":"address","name":"recipientAddress","type":"address"},{"internalType":"string","name":"location","type":"string"}],"name":"assignAidRecipients","outputs":[],"stateMutability":"nonpayable","type":"function"},
+            {"inputs":[],"name":"currentTokenBalance","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},
+            {"inputs":[],"name":"donationThreshold","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},
+            {"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"donorBalances","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},
+            {"inputs":[{"internalType":"uint256","name":"tokenId","type":"uint256"}],"name":"getTransferTeam","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},
+            {"inputs":[{"internalType":"uint256","name":"tokenId","type":"uint256"}],"name":"getGroundRelief","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},
+            {"inputs":[{"internalType":"uint256","name":"tokenId","type":"uint256"}],"name":"getRecipient","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},
+            {"inputs":[{"internalType":"uint256","name":"tokenId","type":"uint256"}],"name":"isTokenIssued","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"},
+            {"inputs":[],"name":"minDonation","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},
+            {"inputs":[],"name":"reliefAgency","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},
+            {"inputs":[],"name":"tokenIdCounter","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},
+            {"anonymous":false,"inputs":[{"indexed":false,"internalType":"uint256","name":"tokenId","type":"uint256"},{"indexed":false,"internalType":"address[]","name":"donors","type":"address[]"}],"name":"AidTokenIssued","type":"event"}
+        ];
+        
+        const aidTokenHandlerABI = [
+            // AidTokenHandler ABI will be placed here
+            {"inputs":[{"internalType":"address","name":"_aidTokenAddress","type":"address"}],"stateMutability":"nonpayable","type":"constructor"},
+            {"inputs":[{"internalType":"uint256","name":"tokenId","type":"uint256"}],"name":"authenticateTransferTeam","outputs":[],"stateMutability":"nonpayable","type":"function"},
+            {"inputs":[{"internalType":"uint256","name":"tokenId","type":"uint256"}],"name":"authenticateGroundRelief","outputs":[],"stateMutability":"nonpayable","type":"function"},
+            {"inputs":[{"internalType":"uint256","name":"tokenId","type":"uint256"}],"name":"claimAid","outputs":[],"stateMutability":"nonpayable","type":"function"},
+            {"inputs":[{"internalType":"uint256","name":"tokenId","type":"uint256"}],"name":"getAidStatusString","outputs":[{"internalType":"string","name":"","type":"string"}],"stateMutability":"view","type":"function"},
+            {"inputs":[{"internalType":"uint256","name":"","type":"uint256"}],"name":"aidStatus","outputs":[{"internalType":"enum AidTokenHandler.AidStatus","name":"","type":"uint8"}],"stateMutability":"view","type":"function"},
+            {"anonymous":false,"inputs":[{"indexed":false,"internalType":"uint256","name":"tokenId","type":"uint256"},{"indexed":false,"internalType":"address","name":"actor","type":"address"},{"indexed":false,"internalType":"enum AidTokenHandler.AidStatus","name":"newStatus","type":"uint8"}],"name":"AidTransferred","type":"event"}
+        ];
+        
+        // Contract bytecode for deployment
+        const didRegistryBytecode = "608060405234801561001057600080fd5b506113cd806100206000396000f3fe608060405234801561001057600080fd5b50600436106100935760003560e01c80636c8e7aa61161006657806380ac58cd1161005057806380ac58cd1461018e578063ad2119901461019b578063e2f4560d146101b857600080fd5b80636c8e7aa61461014e5780637fc3caea1461017157600080fd5b80630f78d13e1461009857806320c1a528146100ca578063359ef75b146100fa5780634e546a571461010d575b600080fd5b6100b560048036038101906100b09190610c7f565b6101d5565b6040516100c19190610d8d565b60405180910390f35b6100e760048036038101906100e29190610c7f565b61021b565b6040516100f19190610e33565b60405180910390f35b61010d6101083660046110fd565b610269565b005b61013a61011b36600461114e565b73ffffffffffffffffffffffffffffffffffffffff1660009081526020819052604090205460ff1690565b60405161014991906111b0565b60405180910390f35b61016161015c36600461114e565b6102fb565b60405161016e929190611205565b60405180910390f35b61018461017f36600461114e565b6103aa565b6040516100c19190611245565b6101846103ee565b6101ae6101a936600461114e565b6103fb565b6040516100c1919061135d565b6101cb6101c636600461114e565b61040d565b6040516100c191906113a3565b606060036000838152602001908152602001600020805461019691906111df565b6000602081905290815260409020805460018201805490919061023a90611483565b80601f016020809104026020016040519081016040528092919081815260200182805461026690611483565b8154818152602001915080545b80156102905783820183015260010161027c565b815460010180549091906102a390611483565b80601f01602080910402602001604051908101604052809291908181526020018280546102cf90611483565b80156102855750505050509050915091509150915091565b73ffffffffffffffffffffffffffffffffffffffff81166000908152602081905260408120805482918291829182916103789190815b805460408051602060026001851615610100027fffffffffffffffffffffffffffffffff0190941693909304601f810184900484028201840190925281815292918301828280156103655780601f1061033a57610100808354040283529160200191610365565b820191906000526020600020905b81548152906001019060200180831161034857829003601f168201915b5050505050610419565b604080518082019091528481526000602082015290969095509350505050565b60608060006103b7610512565b905073ffffffffffffffffffffffffffffffffffffffff841682600081518110610409577f4e487b7100000000000000000000000000000000000000000000000000000000600052603260045260246000fd5b90602001902090565b6060600260018301610318565b6060600160019290610318565b60608280519050606090826001016040519080825280601f01601f19166020018201604052801561045b576020820181803683370190505b5090507f3000000000000000000000000000000000000000000000000000000000000000816000815181106104b7577f4e487b7100000000000000000000000000000000000000000000000000000000600052603260045260246000fd5b60200101907effffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff1916908160001a9053508091505092915050565b6040805160088101825260008082526020908101829052918101829052606081018290526080810182905260a0810182905260c0810182905260e081019190915290565b6001805461054290611483565b80601f016020809104026020016040519081016040528092919081815260200182805461056e90611483565b80156105bb5780601f10610590576101008083540402835291602001916105bb565b820191906000526020600020905b81548152906001019060200180831161059e57829003601f168201915b505050505081565b828054610555929061051c565b6000815180516105e4916014916020909101906106cb565b506020820151816001015560408201518160020155606082015181600301556080820151816004015560a0820151816005015560c0820151816006015560e08201518160070155905050565b82805482518184018452600083527f737472696e67000000000000000000000000000000000000000000000000000091830191909152919290916106889184918501906106cb565b5060208201516106a4906001830160208601906106cb565b5060408201516106bc906002830160208601906106cb565b506060820151816003015550565b8280546106d790611483565b90600052602060002090601f0160209004810192826106f9576000855561073f565b82601f1061071257805160ff191683800117855561073f565b8280016001018555821561073f579182015b8281111561073f578251825591602001919060010190610724565b5061074b92915061074f565b5090565b5b8082111561074b576000815560010161074f565b60008083601f84011261077457600080fd5b5081356001600160401b0381111561078b57600080fd5b6020830191508360208285010111156107a357600080fd5b9250929050565b600080602083850312156107bd57600080fd5b82356001600160401b038111156107d357600080fd5b6107df85828601610762565b90969095509350505050565b73ffffffffffffffffffffffffffffffffffffffff81168114610809578182fd5b82525050565b600080600060608486031215610823578283fd5b833561082e816108ce565b95602085013595506040909401359392505050565b60008060006040848603121561085757600080fd5b8335610862816108ce565b92506020840135915061087482610a57565b809150509250925092565b600060208284031215610890578081fd5b813561089b81610a57565b9392505050565b6000602082840312156108b3578081fd5b81356108be816108ce565b9392505050565b73ffffffffffffffffffffffffffffffffffffffff81168114610809578081fd5b600082601f83011261090157600080fd5b813560206109106109028361082f565b611418565b828152606092830284018201928282019190878511156109a8578586fd5b8386015b82811015610a4c57803567ffffffffffffffff8111156109cb578788fd5b8801603f81018a136109da578788fd5b86840135886109ea8261082f565b60408151828201528181019450506020810135830187529484019481019281016020820136038b0181018d1015610a1e578a8bfd5b8a8b0135885182880152908801988501908901820136038a82018a1015610a43578a8bfd5b928701928801978a0139821b850101438b525050018861090c565b989a9699505050505050505050565b8015158114610809578051825260208201819052600082820101915060408201526080019050919050565b6020810160008301836000825b83518110156109365760208186018101519083019060f683901c908111610ac35760f8820291909101908201610ad3565b60f0820291909101908201610ad3565b01938460010193505050506108f0565b60208101610b0f8284610a57565b92915050565b60208082528101610b278184610a9e565b9392505050565b600060a08201905060018060a01b038416825282356020830152602083013560408301526040830135606083015260608301356080830152831515608083015260a0830135610b7c81610a57565b8091505092915050565b600060408201905060018060a01b038416825282602083015260806040830152610bb3608083018461075f565b949350505050565b602080825281016102408284610a9e565b60408101610b0f82846107e8565b600060e08201905060018060a01b038416825282602083015260408201526000606082015260006080820152600060a0820152600060c082015260e082015261023f8201905092915050565b600060208284031215610c91578081fd5b81356001600160401b03811115610ca6578182fd5b610cb28482850161075f565b949350505050565b600060208284031215610ccb578081fd5b81356001600160401b03811115610ce0578182fd5b610cec84828501610aa4565b949350505050565b600060208284031215610d05578081fd5b5035919050565b600080600060408486031215610d20578182fd5b8335925060208401356001600160401b03811115610d3c578283fd5b610d4886828701610762565b9497909650939450505050565b6040808252810183905273ffffffffffffffffffffffffffffffffffffffff83166020830152818360408401376000608081850152835180608085015260005b8181101561076e578581018201518582018301528101610d9b565b8181111561078b5783608083870101525b50601f019092160160400195945050505050565b60006001845110610dfd578384fd5b8360051b8085019250600019828410610e14578485fd5b0295945050505050565b60208082526001908201527f610000000000000000000000000000000000000000000000000000000000000060408201526060019050919050565b60208082528184602083013760009101908152919050565b60208101610e4b828461076f565b92915050565b6020808252825160408201819052606083015b60608481018181101561076e578651835260208681019290920191601f1990910116908401610e5e565b600060208084528282016040830152606060408201526000610ea660608301846107e8565b95945050505050565b600060608201905060018060a01b03841682528260208301528260408301528560608301376000818301606090810191909152601f909201601f19160101919050565b6020808252810160048319011561076e57602083019050610e5e565b60208101610f2b82846108fe565b9392505050565b60408082528101610f438185610a9e565b838560408401376000818401604090810191909152601f909201601f1916010192915050565b6020808252601e908201527f5472616e736665722074656d73206c6f636174696f6e206d69736d6174636800604082015260600190565b60208082526020905b81548152901561076e5760010161076e565b6020808252601d908201527f4772616e64204772656c6965662066756e6374696f6e616c6974792f746578536080820152601c01905b81548152906001019060200180831161076e57829003601f168201915b50505050508152602001600060028111156109365761090b565b600060608320600018601f8601160301811261076e578451825260208401519350604090810151939094509290920160601b91909101601f19810191600190811561093657905b81548152906001019060200180831161093657829003601f168201915b50505050508152602001600060028111156109365761095e565b60408101610b0f828461092d565b600060208284031215611051578081fd5b81356001600160401b03811115611066578182fd5b61107284828501610aa4565b949350505050565b600073ffffffffffffffffffffffffffffffffffffffff808716835280861660208401525084604083015260806060830152825460808301526020830180548085015260408301805486519081016040528087528286019350828015610ca6578083600052602060002090601f016020900481019282156110a6576000855561090a565b8280016001018555821561073f579182015b8281111561073f57825182559160200191906001019061076e565b60006020828403121561110f578081fd5b81356001600160401b0381111561112457600080fd5b61113084828501610762565b91505092915050565b600060208284031215611149578081fd5b5035919050565b600060208284031215611160578081fd5b813561089b816108ce565b60006001600160a01b03821680610b0f828461092d565b602080252601f19601f8301168401835160020b81013590819083016000805b8381101561120e57815160f81c6020808301919091038301918f010161120e565b50505050018060001b61076e565b6020810161121d8284610a56565b9392505050565b80820180601f850112156109365760208514156109125761123981610a15565b565b6020810161123d82846108fe565b92915050565b602080825281010188820135611259816108ce565b7fffffffffffffffffffffffffffffffffffffffff0000000000000000000000008082870137010137606090810191909152601f909201601f191601019392505050565b602080825281010183810135611300816108ce565b7fffffffffffffffffffffffffffffffffffffffff0000000000000000000000008082860137010137606090810191909152601f909201601f191601019392505050565b6020808252810161076e8184610a9e565b602080825281016113718184610a9e565b9392505050565b60208082528101610e5e8184610a9e565b602080825281016113b78184610a9e565b9392505050565b602080825282518282018190526000929181019190610e5e565b83815260406020820152600061076e6040830184610a9e565b600060a08284031215610ca6578082fd5b604051601f8201601f1916810167ffffffffffffffff81118282101715611442576114426114cd565b604052919050565b600082601f830112611459578081fd5b8135611467610902826113e7565b81815284602083860101111561147b578283fd5b8260208601602083013760006020848301015250505092915050565b600181811c9082168061149757607f821691505b602082108114156114fb577f4e487b7100000000000000000000000000000000000000000000000000000000600052602260045260246000fd5b50919050565b7f4e487b7100000000000000000000000000000000000000000000000000000000600052604160045260246000fdfea264697066735822122008b5ca6b2f16c75ca0dc54dfc7aaf8a8c8f4abcdd553aa29f8d071d87e3b1bd064736f6c63430008050033";
+        
+        const aidTokenBytecode = "0x608060405234801561001057600080fd5b50604051610fa2380380610fa28339818101604052604081101561003357600080fd5b508051602090910151600080546001600160a01b039384166001600160a01b03199182161790915560018054929093169116179055610f32806100766000396000f3fe60806040526004361061009c5760003560e01c8063661d92e311610064578063661d92e3146102c3578063949d225d146102f0578063a5089eb614610317578063bcb8ba7c1461034a578063dd467064146103775761009c565b8063179de97f146100a15780631ed4276c146100c857806356cefdc714610105578063599c0fa41461012f5780635cc1d64a1461015c575b600080fd5b3480156100ad57600080fd5b506100b661039a565b60408051918252519081900360200190f35b3480156100d457600080fd5b506100b6600480360360208110156100eb57600080fd5b503573ffffffffffffffffffffffffffffffffffffffff166103a0565b34801561011157600080fd5b5061012d6004803603602081101561012857600080fd5b50356103b2565b005b34801561013b57600080fd5b506100b66004803603602081101561015257600080fd5b5035610460565b34801561016857600080fd5b506101916004803603602081101561017f57600080fd5b503573ffffffffffffffffffffffffffffffffffffffff1661048c565b60408051602080825283518183015283519192839290830191858101910280838360005b838110156101cd5781810151838201526020016101b5565b505050509050019250505060405180910390f35b3480156101e957600080fd5b506101916104f2565b34801561027957600080fd5b506102966004803603602081101561029057600080fd5b5035610556565b604080516001600160a01b039092168252519081900360200190f35b3480156102cf57600080fd5b506100b6600480360360208110156102e657600080fd5b503561057d565b3480156102fc57600080fd5b506102966004803603602081101561031357600080fd5b50356105a4565b34801561032357600080fd5b506102966004803603602081101561033a57600080fd5b50356001600160a01b03166105cb565b34801561035657600080fd5b506100b66004803603602081101561036d57600080fd5b50356105de565b34801561038357600080fd5b506100b66004803603602081101561039a57600080fd5b5035610605565b60035481565b60076020526000908152604090205481565b60008054604080516370a0823160e01b8152306004820152905134926101009004906001600160a01b0316916370a0823191602480820192602092909190829003018186803b15801561040457600080fd5b505afa158015610418573d6000803e3d6000fd5b505050506040513d602081101561042e57600080fd5b505111156104555761043e610630565b600380546001019055610455610630565b50600380546001019055565b60008181526002602052604081206004015460ff1661047d575060006104e8565b506000818152600260205260409020600501546001600160a01b0316151561047d5750600161047d565b600560209081526000928352604080842090915290825290205481565b6060600083815260026020526040812060040154610100900460ff161515610517575060006104e8565b506000828152600260205260409020805480610630565b6000818152600260205260409020600501546001600160a01b031690565b60008181526002602052604081205481610630565b60008181526002602052604090206003546001600160a01b031690565b606081610630565b60008181526002602052604090206003015460ff16610648570161062d565b506001610648565b600260008281526020019081526020016000206003015460ff16610648570161062d565b6000610648565b60405180604001604052806002906020820280368337509192915050560a165627a7a72305820e4da860aad7d0e5a0ca8ab4d9cc52f7ea5a42c04f0e3be3e8aac84a09b6d8b950029";
+        
+        const aidTokenHandlerBytecode = "0x608060405234801561001057600080fd5b50604051610c42380380610c428339818101604052602081101561003357600080fd5b5051600080546001600160a01b039092166001600160a01b0319909216919091179055610bcf806100656000396000f3fe608060405234801561001057600080fd5b50600436106100575760003560e01c80633affc0ef1461005c57806379a3879e1461007d578063bce2fc411461009a578063bd6268c3146100b7578063fe30349c146100d4575b600080fd5b6100796004803603602081101561007257600080fd5b50356100de565b005b6100796004803603602081101561009357600080fd5b5035610201565b610079600480360360208110156100b057600080fd5b5035610319565b6100c061042a565b604051808260018111156100d057fe5b815260200191505060405180910390f35b6100c0610430565b600080548190604080516370a0823160e01b81526001600160a01b039283166004820152905191831692600092602480830193919282900301818387803b15801561012757600080fd5b505af115801561013b573d6000803e3d6000fd5b505050506040513d602081101561015157600080fd5b5050600083815260016020526040902054159050610171576100dd565b6002603e8111156100dd57fe5b600085815260016020526040812054146101ce57600083815260016020526040812054146101ce576001600285815260200190815260200160002060006101000a81548160ff021916908360018111156100dd57fe5b505050505050610200565b7f8c7dda24bf7d0b333a40c80f6d0f9e97eee3f8b46c23fb9f76ee86979f7f4c55818660405180836001811115610200565b8060011b60ff16151560011415610469576001019060200180831161043757600052602060002090600191828204019190069054906101000a900460ff16600181111561046957fe5b14610480576000610483565b600161048356600190505b9392505050565b600080548190604080516370a0823160e01b81526001600160a01b039283166004820152905191831692600092602480830193919282900301818387803b1580156104c757600080fd5b505af11580156104db573d6000803e3d6000fd5b505050506040513d60208110156104f157600080fd5b5050600083815260016020526040812054146104ff576100dd565b60008054906101000a90046001600160a01b03166001600160a01b031663556cefdc856040518263ffffffff1660e01b81526004018082815260200191505060206040518083038186803b15801561055457600080fd5b505afa158015610568573d6000803e3d6000fd5b505050506040513d602081101561057e57600080fd5b50516001600160a01b0316336001600160a01b0316146105b15760006100dd565b600083815260016020526040902054600114610316578060011415610316576001610629565b600080548190604080516370a0823160e01b81526001600160a01b039283166004820152905191831692600092602480830193919282900301818387803b15801561066c57600080fd5b505af1158015610680573d6000803e3d6000fd5b505050506040513d602081101561069657600080fd5b505060008381526001602052604081205415610316578060011415610316576002610629565b600080548190604080516370a0823160e01b81526001600160a01b039283166004820152905191831692600092602480830193919282900301818387803b15801561070657600080fd5b505af115801561071a573d6000803e3d6000fd5b505050506040513d602081101561073057600080fd5b5050600083815260016020526040902054600314151561074f576100dd565b60008054906101000a90046001600160a01b03166001600160a01b0316635cc1d64a856040518263ffffffff1660e01b81526004018082815260200191505060206040518083038186803b1580156107a457600080fd5b505afa1580156107b8573d6000803e3d6000fd5b505050506040513d60208110156107ce57600080fd5b50516001600160a01b0316336001600160a01b0316146107ee575050610200565b6000838152600160205260409020546002146107ee576003610629565b6040518060400160405280600281526020016000151515158152505090565b60405180610120016040528060b960020a62333539026000191681526020017f0000000000000000000000000000000000000000000000000000000000000000815260200160001515158152602001600060028111156100dd57fe5b600080548190604080516370a0823160e01b81526001600160a01b039283166004820152905191831692600092602480830193919282900301818387803b15801561070657600080fd5b6000388060e087843750505050938592505050565b6117908210610878576020610878565b60208152602082821067ffffffffffffffff1981336000602087013761085f565b60008184823760006110008385013750938684395050505b500190565b60405180610200016040528060c060020a6253206000191681526020017f000000000000000000000000000000000000000000000000000000000000000081526020017f000000000000000000000000000000000000000000000000000000000000000081526020017f000000000000000000000000000000000000000000000000000000000000000060001916815260200160001515158152602001600060028111156100dd57fe5b903560001a600184101561098b576000610997565b7f5d000000000000000000000000000000000000000000000000000000000000005b9250929050565b60006040518060200160405280600190602082028038833950919291505056fea264697066735822122040aeb8bde28b143e0d19d2c06e68a1cc2def8a49e95dff1cdfad6f63a1c5e63564736f6c63430008050033";
+        
+        // Global variables
+        let web3;
+        let userAccount;
+        let didRegistryContract;
+        let aidTokenContract;
+        let aidTokenHandlerContract;
+        let didRegistryAddress;
+        let aidTokenAddress;
+        let aidTokenHandlerAddress;
+        let selectionModalTarget;
+        
+        // Connect to MetaMask wallet
+        async function connectWallet() {
+            try {
+                // Check if MetaMask is installed
+                if (window.ethereum) {
+                    web3 = new Web3(window.ethereum);
+                    // Request account access
+                    const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+                    userAccount = accounts[0];
+                    document.getElementById('userAccount').textContent = userAccount;
+                    showNotification('Wallet connected successfully!', 'success');
+                    
+                    // Listen for account changes
+                    window.ethereum.on('accountsChanged', function (accounts) {
+                        userAccount = accounts[0];
+                        document.getElementById('userAccount').textContent = userAccount || 'Not connected';
+                    });
+                } else {
+                    showNotification('Please install MetaMask to use this dApp', 'danger');
+                }
+            } catch (error) {
+                console.error(error);
+                showNotification('Failed to connect wallet: ' + error.message, 'danger');
+            }
+        }
+        
+        // Deploy DIDRegistry contract
+        async function deployDIDRegistry() {
+            try {
+                if (!web3 || !userAccount) {
+                    showNotification('Please connect your wallet first', 'warning');
+                    return;
+                }
+                
+                showNotification('Deploying DIDRegistry contract...', 'info');
+                
+                const didRegistryContract = new web3.eth.Contract(didRegistryABI);
+                const deployTx = didRegistryContract.deploy({
+                    data: didRegistryBytecode
+                });
+                
+                const gas = await deployTx.estimateGas();
+                const deployed = await deployTx.send({
+                    from: userAccount,
+                    gas
+                });
+                
+                didRegistryAddress = deployed.options.address;
+                didRegistryContract = deployed;
+                
+                document.getElementById('didRegistryAddress').innerHTML = `<div class="alert alert-success">DIDRegistry deployed at: <span class="address-display">${didRegistryAddress}</span></div>`;
+                document.getElementById('didRegistryAddressInput').value = didRegistryAddress;
+                document.getElementById('existingDIDRegistry').value = didRegistryAddress;
+                document.getElementById('statusDIDRegistry').textContent = didRegistryAddress;
+                
+                showNotification('DIDRegistry contract deployed successfully!', 'success');
+            } catch (error) {
+                console.error(error);
+                showNotification('Failed to deploy DIDRegistry: ' + error.message, 'danger');
+            }
+        }
+        
+        // Deploy AidToken contract
+        async function deployAidToken() {
+            try {
+                if (!web3 || !userAccount) {
+                    showNotification('Please connect your wallet first', 'warning');
+                    return;
+                }
+                
+                const reliefAgencyAddress = document.getElementById('reliefAgencyAddress').value || userAccount;
+                const didRegistryAddressInput = document.getElementById('didRegistryAddressInput').value;
+                
+                if (!didRegistryAddressInput) {
+                    showNotification('Please enter DIDRegistry contract address', 'warning');
+                    return;
+                }
+                
+                showNotification('Deploying AidToken contract...', 'info');
+                
+                const aidTokenContract = new web3.eth.Contract(aidTokenABI);
+                const deployTx = aidTokenContract.deploy({
+                    data: aidTokenBytecode,
+                    arguments: [reliefAgencyAddress, didRegistryAddressInput]
+                });
+                
+                const gas = await deployTx.estimateGas();
+                const deployed = await deployTx.send({
+                    from: userAccount,
+                    gas
+                });
+                
+                aidTokenAddress = deployed.options.address;
+                aidTokenContract = deployed;
+                
+                document.getElementById('aidTokenAddress').innerHTML = `<div class="alert alert-success">AidToken deployed at: <span class="address-display">${aidTokenAddress}</span></div>`;
+                document.getElementById('aidTokenAddressInput').value = aidTokenAddress;
+                document.getElementById('existingAidToken').value = aidTokenAddress;
+                document.getElementById('statusAidToken').textContent = aidTokenAddress;
+                
+                showNotification('AidToken contract deployed successfully!', 'success');
+            } catch (error) {
+                console.error(error);
+                showNotification('Failed to deploy AidToken: ' + error.message, 'danger');
+            }
+        }
+        
+        // Deploy AidTokenHandler contract
+        async function deployAidTokenHandler() {
+            try {
+                if (!web3 || !userAccount) {
+                    showNotification('Please connect your wallet first', 'warning');
+                    return;
+                }
+                
+                const aidTokenAddressInput = document.getElementById('aidTokenAddressInput').value;
+                
+                if (!aidTokenAddressInput) {
+                    showNotification('Please enter AidToken contract address', 'warning');
+                    return;
+                }
+                
+                showNotification('Deploying AidTokenHandler contract...', 'info');
+                
+                const aidTokenHandlerContract = new web3.eth.Contract(aidTokenHandlerABI);
+                const deployTx = aidTokenHandlerContract.deploy({
+                    data: aidTokenHandlerBytecode,
+                    arguments: [aidTokenAddressInput]
+                });
+                
+                const gas = await deployTx.estimateGas();
+                const deployed = await deployTx.send({
+                    from: userAccount,
+                    gas
+                });
+                
+                aidTokenHandlerAddress = deployed.options.address;
+                aidTokenHandlerContract = deployed;
+                
+                document.getElementById('aidTokenHandlerAddress').innerHTML = `<div class="alert alert-success">AidTokenHandler deployed at: <span class="address-display">${aidTokenHandlerAddress}</span></div>`;
+                document.getElementById('existingAidTokenHandler').value = aidTokenHandlerAddress;
+                document.getElementById('statusAidTokenHandler').textContent = aidTokenHandlerAddress;
+                
+                showNotification('AidTokenHandler contract deployed successfully!', 'success');
+            } catch (error) {
+                console.error(error);
+                showNotification('Failed to deploy AidTokenHandler: ' + error.message, 'danger');
+            }
+        }
+        
+        // Connect to existing contracts
+        async function connectToContracts() {
+            try {
+                if (!web3) {
+                    showNotification('Please connect your wallet first', 'warning');
+                    return;
+                }
+                
+                const existingDIDRegistry = document.getElementById('existingDIDRegistry').value;
+                const existingAidToken = document.getElementById('existingAidToken').value;
+                const existingAidTokenHandler = document.getElementById('existingAidTokenHandler').value;
+                
+                if (!existingDIDRegistry || !existingAidToken || !existingAidTokenHandler) {
+                    showNotification('Please enter all contract addresses', 'warning');
+                    return;
+                }
+                
+                // Connect to DIDRegistry
+                didRegistryAddress = existingDIDRegistry;
+                didRegistryContract = new web3.eth.Contract(didRegistryABI, didRegistryAddress);
+                
+                // Connect to AidToken
+                aidTokenAddress = existingAidToken;
+                aidTokenContract = new web3.eth.Contract(aidTokenABI, aidTokenAddress);
+                
+                // Connect to AidTokenHandler
+                aidTokenHandlerAddress = existingAidTokenHandler;
+                aidTokenHandlerContract = new web3.eth.Contract(aidTokenHandlerABI, aidTokenHandlerAddress);
+                
+                // Update UI elements
+                document.getElementById('statusDIDRegistry').textContent = didRegistryAddress;
+                document.getElementById('statusAidToken').textContent = aidTokenAddress;
+                document.getElementById('statusAidTokenHandler').textContent = aidTokenHandlerAddress;
+                
+                showNotification('Connected to existing contracts successfully!', 'success');
+                
+                // Fetch contract information
+                refreshContractInfo();
+            } catch (error) {
+                console.error(error);
+                showNotification('Failed to connect to contracts: ' + error.message, 'danger');
+            }
+        }
+        
+        // Register DID functions
+        async function registerDID(roleType) {
+            try {
+                if (!didRegistryContract) {
+                    showNotification('Please deploy or connect to DIDRegistry contract first', 'warning');
+                    return;
+                }
+                
+                const address = document.getElementById('didAddress').value || userAccount;
+                const location = document.getElementById('didLocation').value;
+                
+                if (!location) {
+                    showNotification('Please enter a location', 'warning');
+                    return;
+                }
+                
+                let method;
+                let roleText;
+                
+                switch (roleType) {
+                    case 'transporter':
+                        method = didRegistryContract.methods.registerTransporterDID(address, location);
+                        roleText = 'Transporter';
+                        break;
+                    case 'groundRelief':
+                        method = didRegistryContract.methods.registerGroundReliefDID(address, location);
+                        roleText = 'Ground Relief';
+                        break;
+                    case 'recipient':
+                        method = didRegistryContract.methods.registerRecipientDID(address, location);
+                        roleText = 'Recipient';
+                        break;
+                }
+                
+                showNotification(`Registering ${address} as ${roleText}...`, 'info');
+                
+                const gas = await method.estimateGas({ from: userAccount });
+                await method.send({ from: userAccount, gas });
+                
+                showNotification(`Successfully registered ${address} as ${roleText}!`, 'success');
+            } catch (error) {
+                console.error(error);
+                showNotification('Failed to register DID: ' + error.message, 'danger');
+            }
+        }
+        
+        // Check role of an address
+        async function checkRole() {
+            try {
+                if (!didRegistryContract) {
+                    showNotification('Please deploy or connect to DIDRegistry contract first', 'warning');
+                    return;
+                }
+                
+                const address = document.getElementById('checkAddressRole').value;
+                
+                if (!address) {
+                    showNotification('Please enter an address to check', 'warning');
+                    return;
+                }
+                
+                const roleId = await didRegistryContract.methods.getRole(address).call();
+                const location = await didRegistryContract.methods.getLocation(address).call();
+                const didInfo = await didRegistryContract.methods.dids(address).call();
+                
+                let roleText;
+                switch (parseInt(roleId)) {
+                    case 0:
+                        roleText = 'None';
+                        break;
+                    case 1:
+                        roleText = 'Transporter';
+                        break;
+                    case 2:
+                        roleText = 'Ground Relief';
+                        break;
+                    case 3:
+                        roleText = 'Recipient';
+                        break;
+                }
+                
+                const resultElement = document.getElementById('roleResult');
+                resultElement.innerHTML = `
+                    <strong>Address:</strong> ${address}<br>
+                    <strong>Role:</strong> ${roleText}<br>
+                    <strong>Location:</strong> ${location}<br>
+                    <strong>DID:</strong> ${didInfo.did}
+                `;
+                resultElement.style.display = 'block';
+            } catch (error) {
+                console.error(error);
+                showNotification('Failed to check role: ' + error.message, 'danger');
+            }
+        }
+        
+        // View registered users by role
+        async function viewRegisteredUsers(roleType) {
+            try {
+                if (!didRegistryContract) {
+                    showNotification('Please deploy or connect to DIDRegistry contract first', 'warning');
+                    return;
+                }
+                
+                let method;
+                let roleText;
+                
+                switch (roleType) {
+                    case 'transporter':
+                        method = didRegistryContract.methods.getAllTransporters();
+                        roleText = 'Transporter';
+                        break;
+                    case 'groundRelief':
+                        method = didRegistryContract.methods.getAllGroundRelief();
+                        roleText = 'Ground Relief';
+                        break;
+                    case 'recipient':
+                        method = didRegistryContract.methods.getAllRecipients();
+                        roleText = 'Recipient';
+                        break;
+                }
+                
+                const addresses = await method.call();
+                const tableBody = document.getElementById('registeredUsersTable').getElementsByTagName('tbody')[0];
+                
+                // Clear table
+                tableBody.innerHTML = '';
+                
+                if (addresses.length === 0) {
+                    showNotification(`No ${roleText} addresses registered`, 'warning');
+                    return;
+                }
+                
+                // Populate table
+                for (const address of addresses) {
+                    const location = await didRegistryContract.methods.getLocation(address).call();
+                    
+                    const row = tableBody.insertRow();
+                    const typeCell = row.insertCell(0);
+                    const addressCell = row.insertCell(1);
+                    const locationCell = row.insertCell(2);
+                    
+                    typeCell.textContent = roleText;
+                    addressCell.textContent = address;
+                    locationCell.textContent = location;
+                }
+                
+                showNotification(`Found ${addresses.length} registered ${roleText} addresses`, 'success');
+            } catch (error) {
+                console.error(error);
+                showNotification('Failed to fetch registered users: ' + error.message, 'danger');
+            }
+        }
+        
+        // Make a donation
+        async function makeDonation() {
+            try {
+                if (!aidTokenContract) {
+                    showNotification('Please deploy or connect to AidToken contract first', 'warning');
+                    return;
+                }
+                
+                const donationAmount = document.getElementById('donationAmount').value;
+                
+                if (!donationAmount || parseFloat(donationAmount) <= 0) {
+                    showNotification('Please enter a valid donation amount', 'warning');
+                    return;
+                }
+                
+                const minDonation = await aidTokenContract.methods.minDonation().call();
+                const minDonationEth = web3.utils.fromWei(minDonation, 'ether');
+                
+                if (parseFloat(donationAmount) < parseFloat(minDonationEth)) {
+                    showNotification(`Donation must be at least ${minDonationEth} ETH`, 'warning');
+                    return;
+                }
+                
+                showNotification(`Processing donation of ${donationAmount} ETH...`, 'info');
+                
+                const donationWei = web3.utils.toWei(donationAmount, 'ether');
+                await aidTokenContract.methods.donate().send({
+                    from: userAccount,
+                    value: donationWei
+                });
+                
+                showNotification('Donation processed successfully!', 'success');
+                
+                // Update token status
+                checkTokenStatus();
+            } catch (error) {
+                console.error(error);
+                showNotification('Failed to make donation: ' + error.message, 'danger');
+            }
+        }
+        
+        // Check donor balance
+        async function checkDonorBalance() {
+            try {
+                if (!aidTokenContract) {
+                    showNotification('Please deploy or connect to AidToken contract first', 'warning');
+                    return;
+                }
+                
+                const balance = await aidTokenContract.methods.donorBalances(userAccount).call();
+                const balanceEth = web3.utils.fromWei(balance, 'ether');
+                
+                const balanceElement = document.getElementById('donorBalance');
+                balanceElement.innerHTML = `Your total donation balance is <strong>${balanceEth} ETH</strong>`;
+                balanceElement.style.display = 'block';
+            } catch (error) {
+                console.error(error);
+                showNotification('Failed to check balance: ' + error.message, 'danger');
+            }
+        }
+        
+        // Check token status
+        async function checkTokenStatus() {
+            try {
+                if (!aidTokenContract) {
+                    showNotification('Please deploy or connect to AidToken contract first', 'warning');
+                    return;
+                }
+                
+                const tokenIdCounter = await aidTokenContract.methods.tokenIdCounter().call();
+                const currentTokenBalance = await aidTokenContract.methods.currentTokenBalance().call();
+                const donationThreshold = await aidTokenContract.methods.donationThreshold().call();
+                
+                const currentTokenBalanceEth = web3.utils.fromWei(currentTokenBalance, 'ether');
+                const donationThresholdEth = web3.utils.fromWei(donationThreshold, 'ether');
+                
+                // Update UI
+                document.getElementById('tokenIdCounter').textContent = tokenIdCounter;
+                document.getElementById('currentTokenBalance').textContent = `${currentTokenBalanceEth} ETH / ${donationThresholdEth} ETH`;
+                
+                // Calculate progress percentage
+                const progressPercentage = (parseFloat(currentTokenBalance) / parseFloat(donationThreshold)) * 100;
+                const progressBar = document.getElementById('tokenProgress');
+                progressBar.style.width = `${progressPercentage}%`;
+                progressBar.textContent = `${progressPercentage.toFixed(2)}%`;
+                
+                // Update donation threshold displays
+                document.getElementById('minDonation').textContent = `${web3.utils.fromWei(await aidTokenContract.methods.minDonation().call(), 'ether')} ETH`;
+                document.getElementById('donationThreshold').textContent = `${donationThresholdEth} ETH`;
+            } catch (error) {
+                console.error(error);
+                showNotification('Failed to check token status: ' + error.message, 'danger');
+            }
+        }
+        
+        // Assign recipients to token
+        async function assignRecipients() {
+            try {
+                if (!aidTokenContract) {
+                    showNotification('Please deploy or connect to AidToken contract first', 'warning');
+                    return;
+                }
+                
+                const tokenId = document.getElementById('tokenIdAssign').value;
+                const transferTeamAddress = document.getElementById('transferTeamAddress').value;
+                const groundReliefAddress = document.getElementById('groundReliefAddress').value;
+                const recipientAddress = document.getElementById('recipientAddress').value;
+                const location = document.getElementById('locationAssign').value;
+                
+                if (!tokenId || !transferTeamAddress || !groundReliefAddress || !recipientAddress || !location) {
+                    showNotification('Please fill all required fields', 'warning');
+                    return;
+                }
+                
+                // Get relief agency address
+                const reliefAgency = await aidTokenContract.methods.reliefAgency().call();
+                
+                if (userAccount.toLowerCase() !== reliefAgency.toLowerCase()) {
+                    showNotification('Only the relief agency can assign recipients', 'warning');
+                    return;
+                }
+                
+                showNotification(`Assigning recipients to token ID ${tokenId}...`, 'info');
+                
+                const method = aidTokenContract.methods.assignAidRecipients(
+                    tokenId,
+                    transferTeamAddress,
+                    groundReliefAddress,
+                    recipientAddress,
+                    location
+                );
+                
+                const gas = await method.estimateGas({ from: userAccount });
+                await method.send({ from: userAccount, gas });
+                
+                showNotification(`Successfully assigned recipients to token ID ${tokenId}!`, 'success');
+            } catch (error) {
+                console.error(error);
+                showNotification('Failed to assign recipients: ' + error.message, 'danger');
+            }
+        }
+        
+        // Check assignment status
+        async function checkAssignment() {
+            try {
+                if (!aidTokenContract) {
+                    showNotification('Please deploy or connect to AidToken contract first', 'warning');
+                    return;
+                }
+                
+                const tokenId = document.getElementById('tokenIdCheck').value;
+                
+                if (!tokenId) {
+                    showNotification('Please enter a token ID', 'warning');
+                    return;
+                }
+                
+                const isIssued = await aidTokenContract.methods.isTokenIssued(tokenId).call();
+                
+                if (!isIssued) {
+                    showNotification(`Token ID ${tokenId} has not been issued yet`, 'warning');
+                    return;
+                }
+                
+                const transferTeam = await aidTokenContract.methods.getTransferTeam(tokenId).call();
+                const groundRelief = await aidTokenContract.methods.getGroundRelief(tokenId).call();
+                const recipient = await aidTokenContract.methods.getRecipient(tokenId).call();
+                
+                let assignmentStatus;
+                
+                if (transferTeam === '0x0000000000000000000000000000000000000000') {
+                    assignmentStatus = `<div class="alert alert-warning">Token ID ${tokenId} has not been assigned recipients yet</div>`;
+                } else {
+                    assignmentStatus = `
+                        <div class="alert alert-success">
+                            <h5>Token ID ${tokenId} Assignment:</h5>
+                            <strong>Transfer Team:</strong> ${transferTeam}<br>
+                            <strong>Ground Relief:</strong> ${groundRelief}<br>
+                            <strong>Recipient:</strong> ${recipient}
+                        </div>
+                    `;
+                }
+                
+                document.getElementById('assignmentStatus').innerHTML = assignmentStatus;
+                document.getElementById('assignmentStatus').style.display = 'block';
+            } catch (error) {
+                console.error(error);
+                showNotification('Failed to check assignment: ' + error.message, 'danger');
+            }
+        }
+        
+        // Check aid status
+        async function checkAidStatus() {
+            try {
+                if (!aidTokenHandlerContract) {
+                    showNotification('Please deploy or connect to AidTokenHandler contract first', 'warning');
+                    return;
+                }
+                
+                const tokenId = document.getElementById('tokenIdTracking').value;
+                
+                if (!tokenId) {
+                    showNotification('Please enter a token ID', 'warning');
+                    return;
+                }
+                
+                const statusString = await aidTokenHandlerContract.methods.getAidStatusString(tokenId).call();
+                const statusEnum = await aidTokenHandlerContract.methods.aidStatus(tokenId).call();
+                
+                let statusMessage;
+                switch (statusString) {
+                    case 'Issued':
+                        statusMessage = `Token ID ${tokenId} has been issued and is ready for transportation.`;
+                        break;
+                    case 'InTransit':
+                        statusMessage = `Token ID ${tokenId} is currently in transit.`;
+                        break;
+                    case 'Delivered':
+                        statusMessage = `Token ID ${tokenId} has been delivered to the ground relief team.`;
+                        break;
+                    case 'Claimed':
+                        statusMessage = `Token ID ${tokenId} has been claimed by the recipient.`;
+                        break;
+                    default:
+                        statusMessage = `Token ID ${tokenId} has an unknown status.`;
+                }
+                
+                document.getElementById('aidStatusResult').innerHTML = `
+                    <strong>Status:</strong> ${statusString}<br>
+                    <p>${statusMessage}</p>
+                `;
+                document.getElementById('aidStatusResult').style.display = 'block';
+                
+                // Update journey visualization
+                updateAidJourney(parseInt(statusEnum));
+            } catch (error) {
+                console.error(error);
+                showNotification('Failed to check aid status: ' + error.message, 'danger');
+            }
+        }
+        
+        // Update aid journey visualization
+        function updateAidJourney(status) {
+            // Reset all steps to default
+            document.getElementById('issuedStep').className = 'rounded-circle bg-secondary text-white';
+            document.getElementById('inTransitStep').className = 'rounded-circle bg-secondary text-white';
+            document.getElementById('deliveredStep').className = 'rounded-circle bg-secondary text-white';
+            document.getElementById('claimedStep').className = 'rounded-circle bg-secondary text-white';
+            
+            switch (status) {
+                case 0: // Issued
+                    document.getElementById('issuedStep').className = 'rounded-circle bg-success text-white';
+                    break;
+                case 1: // InTransit
+                    document.getElementById('issuedStep').className = 'rounded-circle bg-success text-white';
+                    document.getElementById('inTransitStep').className = 'rounded-circle bg-success text-white';
+                    break;
+                case 2: // Delivered
+                    document.getElementById('issuedStep').className = 'rounded-circle bg-success text-white';
+                    document.getElementById('inTransitStep').className = 'rounded-circle bg-success text-white';
+                    document.getElementById('deliveredStep').className = 'rounded-circle bg-success text-white';
+                    break;
+                case 3: // Claimed
+                    document.getElementById('issuedStep').className = 'rounded-circle bg-success text-white';
+                    document.getElementById('inTransitStep').className = 'rounded-circle bg-success text-white';
+                    document.getElementById('deliveredStep').className = 'rounded-circle bg-success text-white';
+                    document.getElementById('claimedStep').className = 'rounded-circle bg-success text-white';
+                    break;
+            }
+        }
+        
+        // Mark token as in transit
+        async function markInTransit() {
+            try {
+                if (!aidTokenHandlerContract) {
+                    showNotification('Please deploy or connect to AidTokenHandler contract first', 'warning');
+                    return;
+                }
+                
+                const tokenId = document.getElementById('tokenIdTracking').value;
+                
+                if (!tokenId) {
+                    showNotification('Please enter a token ID', 'warning');
+                    return;
+                }
+                
+                showNotification(`Authenticating as transfer team for token ID ${tokenId}...`, 'info');
+                
+                const method = aidTokenHandlerContract.methods.authenticateTransferTeam(tokenId);
+                const gas = await method.estimateGas({ from: userAccount });
+                await method.send({ from: userAccount, gas });
+                
+                showNotification(`Successfully marked token ID ${tokenId} as in transit!`, 'success');
+                
+                // Refresh aid status
+                checkAidStatus();
+            } catch (error) {
+                console.error(error);
+                showNotification('Failed to authenticate as transfer team: ' + error.message, 'danger');
+            }
+        }
+        
+        // Mark token as delivered
+        async function markDelivered() {
+            try {
+                if (!aidTokenHandlerContract) {
+                    showNotification('Please deploy or connect to AidTokenHandler contract first', 'warning');
+                    return;
+                }
+                
+                const tokenId = document.getElementById('tokenIdTracking').value;
+                
+                if (!tokenId) {
+                    showNotification('Please enter a token ID', 'warning');
+                    return;
+                }
+                
+                showNotification(`Authenticating as ground relief for token ID ${tokenId}...`, 'info');
+                
+                const method = aidTokenHandlerContract.methods.authenticateGroundRelief(tokenId);
+                const gas = await method.estimateGas({ from: userAccount });
+                await method.send({ from: userAccount, gas });
+                
+                showNotification(`Successfully marked token ID ${tokenId} as delivered!`, 'success');
+                
+                // Refresh aid status
+                checkAidStatus();
+            } catch (error) {
+                console.error(error);
+                showNotification('Failed to authenticate as ground relief: ' + error.message, 'danger');
+            }
+        }
+        
+        // Mark token as claimed
+        async function markClaimed() {
+            try {
+                if (!aidTokenHandlerContract) {
+                    showNotification('Please deploy or connect to AidTokenHandler contract first', 'warning');
+                    return;
+                }
+                
+                const tokenId = document.getElementById('tokenIdTracking').value;
+                
+                if (!tokenId) {
+                    showNotification('Please enter a token ID', 'warning');
+                    return;
+                }
+                
+                showNotification(`Claiming aid for token ID ${tokenId}...`, 'info');
+                
+                const method = aidTokenHandlerContract.methods.claimAid(tokenId);
+                const gas = await method.estimateGas({ from: userAccount });
+                await method.send({ from: userAccount, gas });
+                
+                showNotification(`Successfully claimed token ID ${tokenId}!`, 'success');
+                
+                // Refresh aid status
+                checkAidStatus();
+            } catch (error) {
+                console.error(error);
+                showNotification('Failed to claim aid: ' + error.message, 'danger');
+            }
+        }
+        
+        // Refresh contract information
+        async function refreshContractInfo() {
+            try {
+                if (!aidTokenContract) {
+                    showNotification('Please deploy or connect to contracts first', 'warning');
+                    return;
+                }
+                
+                // Get AidToken contract information
+                const reliefAgency = await aidTokenContract.methods.reliefAgency().call();
+                const donationThreshold = await aidTokenContract.methods.donationThreshold().call();
+                const minDonation = await aidTokenContract.methods.minDonation().call();
+                const tokenIdCounter = await aidTokenContract.methods.tokenIdCounter().call();
+                
+                // Update UI
+                document.getElementById('reliefAgency').textContent = reliefAgency;
+                document.getElementById('statusDonationThreshold').textContent = web3.utils.fromWei(donationThreshold, 'ether') + ' ETH';
+                document.getElementById('statusMinDonation').textContent = web3.utils.fromWei(minDonation, 'ether') + ' ETH';
+                document.getElementById('statusTokenCounter').textContent = tokenIdCounter;
+                
+                showNotification('Contract information refreshed', 'success');
+            } catch (error) {
+                console.error(error);
+                showNotification('Failed to refresh contract information: ' + error.message, 'danger');
+            }
+        }
+        
+        // Fetch events
+        async function fetchEvents() {
+            try {
+                if (!aidTokenContract || !aidTokenHandlerContract) {
+                    showNotification('Please deploy or connect to contracts first', 'warning');
+                    return;
+                }
+                
+                showNotification('Fetching events...', 'info');
+                
+                // Get AidToken events
+                const aidTokenIssued = await aidTokenContract.getPastEvents('AidTokenIssued', {
+                    fromBlock: 0,
+                    toBlock: 'latest'
+                });
+                
+                // Get AidTokenHandler events
+                const aidTransferred = await aidTokenHandlerContract.getPastEvents('AidTransferred', {
+                    fromBlock: 0,
+                    toBlock: 'latest'
+                });
+                
+                // Combine and sort events
+                const events = [
+                    ...aidTokenIssued.map(event => ({
+                        type: 'AidTokenIssued',
+                        tokenId: event.returnValues.tokenId,
+                        actor: 'System',
+                        details: `Donors: ${event.returnValues.donors.length}`,
+                        blockNumber: event.blockNumber
+                    })),
+                    ...aidTransferred.map(event => ({
+                        type: 'AidTransferred',
+                        tokenId: event.returnValues.tokenId,
+                        actor: event.returnValues.actor,
+                        details: `New Status: ${getStatusText(event.returnValues.newStatus)}`,
+                        blockNumber: event.blockNumber
+                    }))
+                ].sort((a, b) => b.blockNumber - a.blockNumber);
+                
+                // Update table
+                const tableBody = document.getElementById('eventsTable').getElementsByTagName('tbody')[0];
+                tableBody.innerHTML = '';
+                
+                if (events.length === 0) {
+                    showNotification('No events found', 'warning');
+                    return;
+                }
+                
+                // Populate table
+                for (const event of events) {
+                    const row = tableBody.insertRow();
+                    
+                    const typeCell = row.insertCell(0);
+                    const tokenIdCell = row.insertCell(1);
+                    const actorCell = row.insertCell(2);
+                    const detailsCell = row.insertCell(3);
+                    const blockCell = row.insertCell(4);
+                    
+                    typeCell.textContent = event.type;
+                    tokenIdCell.textContent = event.tokenId;
+                    actorCell.textContent = event.actor;
+                    detailsCell.textContent = event.details;
+                    blockCell.textContent = event.blockNumber;
+                }
+                
+                showNotification(`Found ${events.length} events`, 'success');
+            } catch (error) {
+                console.error(error);
+                showNotification('Failed to fetch events: ' + error.message, 'danger');
+            }
+        }
+        
+        // Get status text from enum value
+        function getStatusText(statusEnum) {
+            switch (parseInt(statusEnum)) {
+                case 0:
+                    return 'Issued';
+                case 1:
+                    return 'InTransit';
+                case 2:
+                    return 'Delivered';
+                case 3:
+                    return 'Claimed';
+                default:
+                    return 'Unknown';
+            }
+        }
+        
+        // Show addresses in selection modal
+        async function showSelectionModal(roleType) {
+            try {
+                if (!didRegistryContract) {
+                    showNotification('Please deploy or connect to DIDRegistry contract first', 'warning');
+                    return;
+                }
+                
+                let method;
+                let roleText;
+                
+                switch (roleType) {
+                    case 'transporter':
+                        method = didRegistryContract.methods.getAllTransporters();
+                        roleText = 'Transporters';
+                        selectionModalTarget = 'transferTeamAddress';
+                        break;
+                    case 'groundRelief':
+                        method = didRegistryContract.methods.getAllGroundRelief();
+                        roleText = 'Ground Relief';
+                        selectionModalTarget = 'groundReliefAddress';
+                        break;
+                    case 'recipient':
+                        method = didRegistryContract.methods.getAllRecipients();
+                        roleText = 'Recipients';
+                        selectionModalTarget = 'recipientAddress';
+                        break;
+                }
+                
+                const addresses = await method.call();
+                
+                // Update modal title
+                document.getElementById('selectionModalLabel').textContent = `Select ${roleText} Address`;
+                
+                // Clear table
+                const tableBody = document.getElementById('modalSelectionTable').getElementsByTagName('tbody')[0];
+                tableBody.innerHTML = '';
+                
+                if (addresses.length === 0) {
+                    tableBody.innerHTML = `<tr><td colspan="3">No ${roleText} addresses registered</td></tr>`;
+                } else {
+                    // Populate table
+                    for (const address of addresses) {
+                        const location = await didRegistryContract.methods.getLocation(address).call();
+                        
+                        const row = tableBody.insertRow();
+                        const addressCell = row.insertCell(0);
+                        const locationCell = row.insertCell(1);
+                        const actionCell = row.insertCell(2);
+                        
+                        addressCell.textContent = address;
+                        locationCell.textContent = location;
+                        actionCell.innerHTML = `<button class="btn btn-sm btn-primary select-address" data-address="${address}" data-location="${location}">Select</button>`;
+                    }
+                }
+                
+                // Show modal
+                const modal = new bootstrap.Modal(document.getElementById('selectionModal'));
+                modal.show();
+            } catch (error) {
+                console.error(error);
+                showNotification('Failed to fetch addresses: ' + error.message, 'danger');
+            }
+        }
+        
+        // Select address from modal
+        function selectAddress(address, location) {
+            document.getElementById(selectionModalTarget).value = address;
+            if (selectionModalTarget === 'transferTeamAddress' || selectionModalTarget === 'groundReliefAddress' || selectionModalTarget === 'recipientAddress') {
+                document.getElementById('locationAssign').value = location;
+            }
+            
+            // Hide modal
+            const modal = bootstrap.Modal.getInstance(document.getElementById('selectionModal'));
+            modal.hide();
+        }
+        
+        // Show notification
+        function showNotification(message, type) {
+            const notificationId = 'notification-' + Date.now();
+            const notification = document.createElement('div');
+            notification.className = `alert alert-${type} alert-dismissible fade show`;
+            notification.setAttribute('role', 'alert');
+            notification.id = notificationId;
+            notification.innerHTML = `
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            `;
+            
+            document.getElementById('notificationContainer').appendChild(notification);
+            
+            // Auto-dismiss after 5 seconds
+            setTimeout(() => {
+                const alertElement = document.getElementById(notificationId);
+                if (alertElement) {
+                    const alert = bootstrap.Alert.getOrCreateInstance(alertElement);
+                    alert.close();
+                }
+            }, 5000);
+        }
+        
+        // Event listeners
+        document.addEventListener('DOMContentLoaded', function() {
+            // Connect wallet
+            document.getElementById('connectWallet').addEventListener('click', connectWallet);
+            
+            // Contract setup
+            document.getElementById('deployDIDRegistry').addEventListener('click', deployDIDRegistry);
+            document.getElementById('deployAidToken').addEventListener('click', deployAidToken);
+            document.getElementById('deployAidTokenHandler').addEventListener('click', deployAidTokenHandler);
+            document.getElementById('connectToContracts').addEventListener('click', connectToContracts);
+            
+            // DID Registration
+            document.getElementById('registerTransporter').addEventListener('click', () => registerDID('transporter'));
+            document.getElementById('registerGroundRelief').addEventListener('click', () => registerDID('groundRelief'));
+            document.getElementById('registerRecipient').addEventListener('click', () => registerDID('recipient'));
+            document.getElementById('checkRole').addEventListener('click', checkRole);
+            document.getElementById('viewTransporters').addEventListener('click', () => viewRegisteredUsers('transporter'));
+            document.getElementById('viewGroundRelief').addEventListener('click', () => viewRegisteredUsers('groundRelief'));
+            document.getElementById('viewRecipients').addEventListener('click', () => viewRegisteredUsers('recipient'));
+            
+            // Donation
+            document.getElementById('makeDonation').addEventListener('click', makeDonation);
+            document.getElementById('checkBalance').addEventListener('click', checkDonorBalance);
+            document.getElementById('checkTokenStatus').addEventListener('click', checkTokenStatus);
+            
+            // Token Assignment
+            document.getElementById('selectTransporterBtn').addEventListener('click', () => showSelectionModal('transporter'));
+            document.getElementById('selectGroundReliefBtn').addEventListener('click', () => showSelectionModal('groundRelief'));
+            document.getElementById('selectRecipientBtn').addEventListener('click', () => showSelectionModal('recipient'));
+            document.getElementById('assignRecipients').addEventListener('click', assignRecipients);
+            document.getElementById('checkAssignment').addEventListener('click', checkAssignment);
+            
+            // Aid Tracking
+            document.getElementById('checkAidStatus').addEventListener('click', checkAidStatus);
+            document.getElementById('markInTransit').addEventListener('click', markInTransit);
+            document.getElementById('markDelivered').addEventListener('click', markDelivered);
+            document.getElementById('markClaimed').addEventListener('click', markClaimed);
+            
+            // System Status
+            document.getElementById('refreshStatus').addEventListener('click', refreshContractInfo);
+            document.getElementById('fetchEvents').addEventListener('click', fetchEvents);
+            
+            // Modal selection
+            document.addEventListener('click', function(event) {
+                if (event.target.classList.contains('select-address')) {
+                    const address = event.target.getAttribute('data-address');
+                    const location = event.target.getAttribute('data-location');
+                    selectAddress(address, location);
+                }
+            });
+            
+            // Check if MetaMask is installed
+            if (window.ethereum) {
+                web3 = new Web3(window.ethereum);
+                // Check if already connected
+                window.ethereum.request({ method: 'eth_accounts' })
+                    .then(accounts => {
+                        if (accounts.length > 0) {
+                            userAccount = accounts[0];
+                            document.getElementById('userAccount').textContent = userAccount;
+                        }
+                    })
+                    .catch(console.error);
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1664,7 +1664,7 @@ function formatAddress(address) {
 document.addEventListener('DOMContentLoaded', function() {
     // Connect wallet
     document.getElementById('connectWallet').addEventListener('click', connectWallet);
-    document.getElementById('switchAccount').addEventListener('click', showSwitchAccountModal);
+    // document.getElementById('switchAccount').addEventListener('click', showSwitchAccountModal);
     
     // Contract setup
     // document.getElementById('deployDIDRegistry').addEventListener('click', deployDIDRegistry);

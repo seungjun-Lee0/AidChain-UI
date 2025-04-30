@@ -231,15 +231,6 @@ async function updateAccountRole() {
     }
 }
 
-// // Reset UI when disconnected
-// function resetUI() {
-//     userAccount = null;
-//     document.getElementById('userAccount').textContent = 'Not connected';
-//     document.getElementById('currentAccountDisplay').textContent = 'Not connected';
-//     document.getElementById('accountBalance').textContent = '-';
-//     document.getElementById('accountRole').textContent = '-';
-// }
-
 // Load contract addresses from localStorage
 function loadContractAddresses() {
     try {
@@ -1468,7 +1459,7 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('refreshStatus').addEventListener('click', refreshContractInfo);
     document.getElementById('fetchEvents').addEventListener('click', fetchEvents);
     
-    // Modal selection - 계정 전환 관련 코드 제거됨
+    // Modal selection
     document.addEventListener('click', function(event) {
         // Handle address selection in the modal
         if (event.target.classList.contains('select-address')) {

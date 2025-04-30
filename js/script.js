@@ -38,13 +38,6 @@ const aidTokenHandlerABI = [
     {"anonymous":false,"inputs":[{"indexed":false,"internalType":"uint256","name":"tokenId","type":"uint256"},{"indexed":false,"internalType":"address","name":"actor","type":"address"},{"indexed":false,"internalType":"enum AidTokenHandler.AidStatus","name":"newStatus","type":"uint8"}],"name":"AidTransferred","type":"event"}
 ];
 
-// Contract bytecode for deployment
-const didRegistryBytecode = "";
-
-const aidTokenBytecode = "";
-
-const aidTokenHandlerBytecode = "";
-
 // Global variables
 let web3;
 let userAccount;
@@ -68,54 +61,6 @@ const STORAGE_KEYS = {
     LAST_ACCOUNT: 'blockchain_aid_lastAccount'
 };
 
-// Connect to MetaMask wallet
-async function connectWallet() {
-    try {
-        // Check if MetaMask is installed
-        if (window.ethereum) {
-            web3 = new Web3(window.ethereum);
-            
-            // Request account access
-            const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-            userAccount = accounts[0];
-            
-            // Update UI
-            document.getElementById('userAccount').textContent = userAccount;
-            document.getElementById('currentAccountDisplay').textContent = userAccount;
-            
-            // Save to localStorage
-            localStorage.setItem(STORAGE_KEYS.LAST_ACCOUNT, userAccount);
-            
-            // Get network info
-            await updateNetworkInfo();
-            
-            // Check account balance
-            await updateAccountBalance();
-            
-            // Update account role
-            await updateAccountRole();
-            
-            // Show notification
-            showNotification('Wallet connected successfully!', 'success');
-            
-            // Load saved contract addresses
-            loadContractAddresses();
-            
-            // Setup event listeners for MetaMask events
-            setupMetaMaskEventListeners();
-            
-            return accounts;
-        } else {
-            showNotification('Please install MetaMask to use this dApp', 'danger');
-            return null;
-        }
-    } catch (error) {
-        console.error(error);
-        showNotification('Failed to connect wallet: ' + error.message, 'danger');
-        return null;
-    }
-}
-
 // Setup MetaMask event listeners
 function setupMetaMaskEventListeners() {
     // Listen for account changes
@@ -124,8 +69,15 @@ function setupMetaMaskEventListeners() {
             // User disconnected all accounts
             resetUI();
             showNotification('Wallet disconnected', 'warning');
+            
+            // Update button visibility
+            document.getElementById('connectWallet').style.display = 'inline-block';
+            document.getElementById('disconnectWallet').style.display = 'none';
         } else {
+            // New account selected
             userAccount = accounts[0];
+            
+            // Update UI elements
             document.getElementById('userAccount').textContent = userAccount;
             document.getElementById('currentAccountDisplay').textContent = userAccount;
             
@@ -136,6 +88,10 @@ function setupMetaMaskEventListeners() {
             await updateAccountBalance();
             await updateAccountRole();
             
+            // Update button visibility
+            document.getElementById('connectWallet').style.display = 'none';
+            document.getElementById('disconnectWallet').style.display = 'inline-block';
+            
             showNotification('Account changed to ' + formatAddress(userAccount), 'info');
         }
     });
@@ -143,7 +99,26 @@ function setupMetaMaskEventListeners() {
     // Listen for chain changes
     window.ethereum.on('chainChanged', async function (chainId) {
         // Handle network change - reload page as recommended by MetaMask
-        window.location.reload();
+        showNotification('Network changed. Reloading application...', 'info');
+        setTimeout(() => {
+            window.location.reload();
+        }, 1500);
+    });
+    
+    // Handle connection events 
+    window.ethereum.on('connect', (connectInfo) => {
+        console.log('Connected to MetaMask', connectInfo);
+    });
+    
+    // Handle disconnect events
+    window.ethereum.on('disconnect', (error) => {
+        console.log('Disconnected from MetaMask', error);
+        resetUI();
+        showNotification('Wallet disconnected from network', 'warning');
+        
+        // Update button visibility
+        document.getElementById('connectWallet').style.display = 'inline-block';
+        document.getElementById('disconnectWallet').style.display = 'none';
     });
 }
 
@@ -256,14 +231,14 @@ async function updateAccountRole() {
     }
 }
 
-// Reset UI when disconnected
-function resetUI() {
-    userAccount = null;
-    document.getElementById('userAccount').textContent = 'Not connected';
-    document.getElementById('currentAccountDisplay').textContent = 'Not connected';
-    document.getElementById('accountBalance').textContent = '-';
-    document.getElementById('accountRole').textContent = '-';
-}
+// // Reset UI when disconnected
+// function resetUI() {
+//     userAccount = null;
+//     document.getElementById('userAccount').textContent = 'Not connected';
+//     document.getElementById('currentAccountDisplay').textContent = 'Not connected';
+//     document.getElementById('accountBalance').textContent = '-';
+//     document.getElementById('accountRole').textContent = '-';
+// }
 
 // Load contract addresses from localStorage
 function loadContractAddresses() {
@@ -281,8 +256,6 @@ function loadContractAddresses() {
                 document.getElementById('existingDIDRegistry').value = savedDIDRegistry;
                 document.getElementById('existingAidToken').value = savedAidToken;
                 document.getElementById('existingAidTokenHandler').value = savedAidTokenHandler;
-                // document.getElementById('didRegistryAddressInput').value = savedDIDRegistry;
-                // document.getElementById('aidTokenAddressInput').value = savedAidToken;
                 
                 // Set status display
                 document.getElementById('statusDIDRegistry').textContent = savedDIDRegistry;
@@ -331,8 +304,6 @@ function clearContractData() {
         document.getElementById('existingDIDRegistry').value = '';
         document.getElementById('existingAidToken').value = '';
         document.getElementById('existingAidTokenHandler').value = '';
-        document.getElementById('didRegistryAddressInput').value = '';
-        document.getElementById('aidTokenAddressInput').value = '';
         
         // Clear status display
         document.getElementById('statusDIDRegistry').textContent = 'Not connected';
@@ -350,193 +321,6 @@ function clearContractData() {
         showNotification('Contract data cleared', 'success');
     } catch (error) {
         console.error('Error clearing contract data:', error);
-    }
-}
-
-// Deploy DIDRegistry contract
-async function deployDIDRegistry() {
-    try {
-        if (!web3 || !userAccount) {
-            showNotification('Please connect your wallet first', 'warning');
-            return;
-        }
-        
-        showNotification('Deploying DIDRegistry contract...', 'info');
-        
-        const contract = new web3.eth.Contract(didRegistryABI);
-        const deployTx = contract.deploy({
-            data: didRegistryBytecode
-        });
-        
-        // Estimate gas with increased limit to avoid stack underflow
-        let gasEstimate;
-        try {
-            gasEstimate = await deployTx.estimateGas({ from: userAccount });
-        } catch (error) {
-            console.error('Gas estimation failed:', error);
-            // Use a high default gas limit if estimation fails
-            gasEstimate = 5000000;
-        }
-        
-        // Add 20% buffer to gas estimate
-        const gasLimit = Math.round(gasEstimate * 1.2);
-        
-        const deployOptions = {
-            from: userAccount,
-            gas: gasLimit
-        };
-        
-        // Deploy contract
-        const deployed = await deployTx.send(deployOptions);
-        
-        // Store contract
-        didRegistryAddress = deployed.options.address;
-        didRegistryContract = deployed;
-        
-        // Update UI
-        document.getElementById('didRegistryAddress').innerHTML = `<div class="alert alert-success">DIDRegistry deployed at: <span class="address-display">${didRegistryAddress}</span></div>`;
-        document.getElementById('didRegistryAddressInput').value = didRegistryAddress;
-        document.getElementById('existingDIDRegistry').value = didRegistryAddress;
-        document.getElementById('statusDIDRegistry').textContent = didRegistryAddress;
-        
-        // Save contract address
-        saveContractAddresses();
-        
-        showNotification('DIDRegistry contract deployed successfully!', 'success');
-    } catch (error) {
-        console.error(error);
-        showNotification('Failed to deploy DIDRegistry: ' + error.message, 'danger');
-    }
-}
-
-// Deploy AidToken contract
-async function deployAidToken() {
-    try {
-        if (!web3 || !userAccount) {
-            showNotification('Please connect your wallet first', 'warning');
-            return;
-        }
-        
-        const reliefAgencyAddress = document.getElementById('reliefAgencyAddress').value || userAccount;
-        const didRegistryAddressInput = document.getElementById('didRegistryAddressInput').value;
-        
-        if (!didRegistryAddressInput) {
-            showNotification('Please enter DIDRegistry contract address', 'warning');
-            return;
-        }
-        
-        showNotification('Deploying AidToken contract...', 'info');
-        
-        const contract = new web3.eth.Contract(aidTokenABI);
-        const deployTx = contract.deploy({
-            data: aidTokenBytecode,
-            arguments: [reliefAgencyAddress, didRegistryAddressInput]
-        });
-        
-        // Estimate gas with increased limit to avoid stack underflow
-        let gasEstimate;
-        try {
-            gasEstimate = await deployTx.estimateGas({ from: userAccount });
-        } catch (error) {
-            console.error('Gas estimation failed:', error);
-            // Use a high default gas limit if estimation fails
-            gasEstimate = 6000000;
-        }
-        
-        // Add 20% buffer to gas estimate
-        const gasLimit = Math.round(gasEstimate * 1.2);
-        
-        const deployOptions = {
-            from: userAccount,
-            gas: gasLimit
-        };
-        
-        // Deploy contract
-        const deployed = await deployTx.send(deployOptions);
-        
-        // Store contract
-        aidTokenAddress = deployed.options.address;
-        aidTokenContract = deployed;
-        
-        // Update UI
-        document.getElementById('aidTokenAddress').innerHTML = `<div class="alert alert-success">AidToken deployed at: <span class="address-display">${aidTokenAddress}</span></div>`;
-        document.getElementById('aidTokenAddressInput').value = aidTokenAddress;
-        document.getElementById('existingAidToken').value = aidTokenAddress;
-        document.getElementById('statusAidToken').textContent = aidTokenAddress;
-        
-        // Save contract address
-        saveContractAddresses();
-        
-        // Update account role (might be relief agency now)
-        await updateAccountRole();
-        
-        showNotification('AidToken contract deployed successfully!', 'success');
-    } catch (error) {
-        console.error(error);
-        showNotification('Failed to deploy AidToken: ' + error.message, 'danger');
-    }
-}
-
-// Deploy AidTokenHandler contract
-async function deployAidTokenHandler() {
-    try {
-        if (!web3 || !userAccount) {
-            showNotification('Please connect your wallet first', 'warning');
-            return;
-        }
-        
-        const aidTokenAddressInput = document.getElementById('aidTokenAddressInput').value;
-        
-        if (!aidTokenAddressInput) {
-            showNotification('Please enter AidToken contract address', 'warning');
-            return;
-        }
-        
-        showNotification('Deploying AidTokenHandler contract...', 'info');
-        
-        const contract = new web3.eth.Contract(aidTokenHandlerABI);
-        const deployTx = contract.deploy({
-            data: aidTokenHandlerBytecode,
-            arguments: [aidTokenAddressInput]
-        });
-        
-        // Estimate gas with increased limit to avoid stack underflow
-        let gasEstimate;
-        try {
-            gasEstimate = await deployTx.estimateGas({ from: userAccount });
-        } catch (error) {
-            console.error('Gas estimation failed:', error);
-            // Use a high default gas limit if estimation fails
-            gasEstimate = 5000000;
-        }
-        
-        // Add 20% buffer to gas estimate
-        const gasLimit = Math.round(gasEstimate * 1.2);
-        
-        const deployOptions = {
-            from: userAccount,
-            gas: gasLimit
-        };
-        
-        // Deploy contract
-        const deployed = await deployTx.send(deployOptions);
-        
-        // Store contract
-        aidTokenHandlerAddress = deployed.options.address;
-        aidTokenHandlerContract = deployed;
-        
-        // Update UI
-        document.getElementById('aidTokenHandlerAddress').innerHTML = `<div class="alert alert-success">AidTokenHandler deployed at: <span class="address-display">${aidTokenHandlerAddress}</span></div>`;
-        document.getElementById('existingAidTokenHandler').value = aidTokenHandlerAddress;
-        document.getElementById('statusAidTokenHandler').textContent = aidTokenHandlerAddress;
-        
-        // Save contract address
-        saveContractAddresses();
-        
-        showNotification('AidTokenHandler contract deployed successfully!', 'success');
-    } catch (error) {
-        console.error(error);
-        showNotification('Failed to deploy AidTokenHandler: ' + error.message, 'danger');
     }
 }
 
@@ -886,377 +670,377 @@ async function checkTokenStatus() {
     } catch (error) {
         console.error(error);
         showNotification('Failed to check token status: ' + error.message, 'danger');
-    }
+   }
 }
 
 // Assign recipients to token
 async function assignRecipients() {
-    try {
-        if (!aidTokenContract) {
-            showNotification('Please deploy or connect to AidToken contract first', 'warning');
-            return;
-        }
-        
-        const tokenId = document.getElementById('tokenIdAssign').value;
-        const transferTeamAddress = document.getElementById('transferTeamAddress').value;
-        const groundReliefAddress = document.getElementById('groundReliefAddress').value;
-        const recipientAddress = document.getElementById('recipientAddress').value;
-        const location = document.getElementById('locationAssign').value;
-        
-        if (!tokenId || !transferTeamAddress || !groundReliefAddress || !recipientAddress || !location) {
-            showNotification('Please fill all required fields', 'warning');
-            return;
-        }
-        
-        // Get relief agency address
-        const reliefAgency = await aidTokenContract.methods.reliefAgency().call();
-        
-        if (userAccount.toLowerCase() !== reliefAgency.toLowerCase()) {
-            showNotification('Only the relief agency can assign recipients', 'warning');
-            return;
-        }
-        
-        showNotification(`Assigning recipients to token ID ${tokenId}...`, 'info');
-        
-        const method = aidTokenContract.methods.assignAidRecipients(
-            tokenId,
-            transferTeamAddress,
-            groundReliefAddress,
-            recipientAddress,
-            location
-        );
-        
-        // Estimate gas with a buffer
-        const gas = await method.estimateGas({ from: userAccount });
-        await method.send({ from: userAccount, gas: Math.round(gas * 1.2) });
-        
-        showNotification(`Successfully assigned recipients to token ID ${tokenId}!`, 'success');
-    } catch (error) {
-        console.error(error);
-        showNotification('Failed to assign recipients: ' + error.message, 'danger');
-    }
+   try {
+       if (!aidTokenContract) {
+           showNotification('Please deploy or connect to AidToken contract first', 'warning');
+           return;
+       }
+       
+       const tokenId = document.getElementById('tokenIdAssign').value;
+       const transferTeamAddress = document.getElementById('transferTeamAddress').value;
+       const groundReliefAddress = document.getElementById('groundReliefAddress').value;
+       const recipientAddress = document.getElementById('recipientAddress').value;
+       const location = document.getElementById('locationAssign').value;
+       
+       if (!tokenId || !transferTeamAddress || !groundReliefAddress || !recipientAddress || !location) {
+           showNotification('Please fill all required fields', 'warning');
+           return;
+       }
+       
+       // Get relief agency address
+       const reliefAgency = await aidTokenContract.methods.reliefAgency().call();
+       
+       if (userAccount.toLowerCase() !== reliefAgency.toLowerCase()) {
+           showNotification('Only the relief agency can assign recipients', 'warning');
+           return;
+       }
+       
+       showNotification(`Assigning recipients to token ID ${tokenId}...`, 'info');
+       
+       const method = aidTokenContract.methods.assignAidRecipients(
+           tokenId,
+           transferTeamAddress,
+           groundReliefAddress,
+           recipientAddress,
+           location
+       );
+       
+       // Estimate gas with a buffer
+       const gas = await method.estimateGas({ from: userAccount });
+       await method.send({ from: userAccount, gas: Math.round(gas * 1.2) });
+       
+       showNotification(`Successfully assigned recipients to token ID ${tokenId}!`, 'success');
+   } catch (error) {
+       console.error(error);
+       showNotification('Failed to assign recipients: ' + error.message, 'danger');
+   }
 }
 
 // Check assignment status
 async function checkAssignment() {
-    try {
-        if (!aidTokenContract) {
-            showNotification('Please deploy or connect to AidToken contract first', 'warning');
-            return;
-        }
-        
-        const tokenId = document.getElementById('tokenIdCheck').value;
-        
-        if (!tokenId) {
-            showNotification('Please enter a token ID', 'warning');
-            return;
-        }
-        
-        const isIssued = await aidTokenContract.methods.isTokenIssued(tokenId).call();
-        
-        if (!isIssued) {
-            const assignmentStatus = `<div class="alert alert-warning">Token ID ${tokenId} has not been issued yet</div>`;
-            document.getElementById('assignmentStatus').innerHTML = assignmentStatus;
-            document.getElementById('assignmentStatus').style.display = 'block';
-            return;
-        }
-        
-        const transferTeam = await aidTokenContract.methods.getTransferTeam(tokenId).call();
-        const groundRelief = await aidTokenContract.methods.getGroundRelief(tokenId).call();
-        const recipient = await aidTokenContract.methods.getRecipient(tokenId).call();
-        
-        const zeroAddress = '0x0000000000000000000000000000000000000000';
-        let assignmentStatus;
-        
-        if (transferTeam === zeroAddress && groundRelief === zeroAddress && recipient === zeroAddress) {
-            assignmentStatus = `<div class="alert alert-warning">Token ID ${tokenId} has not been assigned recipients yet</div>`;
-        } else {
-            let transferTeamRole = '';
-            let groundReliefRole = '';
-            let recipientRole = '';
-            
-            // Check if current user matches any role
-            if (transferTeam.toLowerCase() === userAccount.toLowerCase()) {
-                transferTeamRole = ' <span class="badge bg-success">You</span>';
-            }
-            if (groundRelief.toLowerCase() === userAccount.toLowerCase()) {
-                groundReliefRole = ' <span class="badge bg-success">You</span>';
-            }
-            if (recipient.toLowerCase() === userAccount.toLowerCase()) {
-                recipientRole = ' <span class="badge bg-success">You</span>';
-            }
-            
-            assignmentStatus = `
-                <div class="alert alert-success">
-                    <h5>Token ID ${tokenId} Assignment:</h5>
-                    <strong>Transfer Team:</strong> <span class="address-display">${transferTeam}</span>${transferTeamRole}<br>
-                    <strong>Ground Relief:</strong> <span class="address-display">${groundRelief}</span>${groundReliefRole}<br>
-                    <strong>Recipient:</strong> <span class="address-display">${recipient}</span>${recipientRole}
-                </div>
-            `;
-        }
-        
-        document.getElementById('assignmentStatus').innerHTML = assignmentStatus;
-        document.getElementById('assignmentStatus').style.display = 'block';
-    } catch (error) {
-        console.error(error);
-        showNotification('Failed to check assignment: ' + error.message, 'danger');
-    }
+   try {
+       if (!aidTokenContract) {
+           showNotification('Please deploy or connect to AidToken contract first', 'warning');
+           return;
+       }
+       
+       const tokenId = document.getElementById('tokenIdCheck').value;
+       
+       if (!tokenId) {
+           showNotification('Please enter a token ID', 'warning');
+           return;
+       }
+       
+       const isIssued = await aidTokenContract.methods.isTokenIssued(tokenId).call();
+       
+       if (!isIssued) {
+           const assignmentStatus = `<div class="alert alert-warning">Token ID ${tokenId} has not been issued yet</div>`;
+           document.getElementById('assignmentStatus').innerHTML = assignmentStatus;
+           document.getElementById('assignmentStatus').style.display = 'block';
+           return;
+       }
+       
+       const transferTeam = await aidTokenContract.methods.getTransferTeam(tokenId).call();
+       const groundRelief = await aidTokenContract.methods.getGroundRelief(tokenId).call();
+       const recipient = await aidTokenContract.methods.getRecipient(tokenId).call();
+       
+       const zeroAddress = '0x0000000000000000000000000000000000000000';
+       let assignmentStatus;
+       
+       if (transferTeam === zeroAddress && groundRelief === zeroAddress && recipient === zeroAddress) {
+           assignmentStatus = `<div class="alert alert-warning">Token ID ${tokenId} has not been assigned recipients yet</div>`;
+       } else {
+           let transferTeamRole = '';
+           let groundReliefRole = '';
+           let recipientRole = '';
+           
+           // Check if current user matches any role
+           if (transferTeam.toLowerCase() === userAccount.toLowerCase()) {
+               transferTeamRole = ' <span class="badge bg-success">You</span>';
+           }
+           if (groundRelief.toLowerCase() === userAccount.toLowerCase()) {
+               groundReliefRole = ' <span class="badge bg-success">You</span>';
+           }
+           if (recipient.toLowerCase() === userAccount.toLowerCase()) {
+               recipientRole = ' <span class="badge bg-success">You</span>';
+           }
+           
+           assignmentStatus = `
+               <div class="alert alert-success">
+                   <h5>Token ID ${tokenId} Assignment:</h5>
+                   <strong>Transfer Team:</strong> <span class="address-display">${transferTeam}</span>${transferTeamRole}<br>
+                   <strong>Ground Relief:</strong> <span class="address-display">${groundRelief}</span>${groundReliefRole}<br>
+                   <strong>Recipient:</strong> <span class="address-display">${recipient}</span>${recipientRole}
+               </div>
+           `;
+       }
+       
+       document.getElementById('assignmentStatus').innerHTML = assignmentStatus;
+       document.getElementById('assignmentStatus').style.display = 'block';
+   } catch (error) {
+       console.error(error);
+       showNotification('Failed to check assignment: ' + error.message, 'danger');
+   }
 }
 
 // Check aid status
 async function checkAidStatus() {
-    try {
-        if (!aidTokenHandlerContract) {
-            showNotification('Please deploy or connect to AidTokenHandler contract first', 'warning');
-            return;
-        }
-        
-        const tokenId = document.getElementById('tokenIdTracking').value;
-        
-        if (!tokenId) {
-            showNotification('Please enter a token ID', 'warning');
-            return;
-        }
-        
-        // First check if token is issued
-        const isIssued = await aidTokenContract.methods.isTokenIssued(tokenId).call();
-        if (!isIssued) {
-            const statusResult = `
-                <div class="alert alert-warning">
-                    <strong>Status:</strong> Not Issued<br>
-                    <p>Token ID ${tokenId} has not been issued yet. Tokens are issued when donations reach the threshold.</p>
-                </div>
-            `;
-            document.getElementById('aidStatusResult').innerHTML = statusResult;
-            document.getElementById('aidStatusResult').style.display = 'block';
-            
-            // Update journey visualization with all steps inactive
-            updateAidJourney(-1);
-            return;
-        }
-        
-        const statusString = await aidTokenHandlerContract.methods.getAidStatusString(tokenId).call();
-        const statusEnum = await aidTokenHandlerContract.methods.aidStatus(tokenId).call();
-        
-        // Get assignment info
-        const transferTeam = await aidTokenContract.methods.getTransferTeam(tokenId).call();
-        const groundRelief = await aidTokenContract.methods.getGroundRelief(tokenId).call();
-        const recipient = await aidTokenContract.methods.getRecipient(tokenId).call();
-        
-        const zeroAddress = '0x0000000000000000000000000000000000000000';
-        let isAssigned = !(transferTeam === zeroAddress && groundRelief === zeroAddress && recipient === zeroAddress);
-        
-        let statusMessage;
-        let assignmentInfo = '';
-        
-        // Check if token is assigned
-        if (!isAssigned) {
-            statusMessage = `Token ID ${tokenId} has been issued but has not been assigned recipients yet.`;
-        } else {
-            // User role indicators
-            let userTransporter = transferTeam.toLowerCase() === userAccount.toLowerCase();
-            let userGroundRelief = groundRelief.toLowerCase() === userAccount.toLowerCase();
-            let userRecipient = recipient.toLowerCase() === userAccount.toLowerCase();
-            
-            // Assignment info with role badges
-            assignmentInfo = `
-                <div class="mt-3">
-                    <strong>Assigned Roles:</strong><br>
-                    <div class="mt-1"><strong>Transfer Team:</strong> <span class="address-display">${transferTeam}</span> ${userTransporter ? '<span class="badge bg-success">You</span>' : ''}</div>
-                    <div class="mt-1"><strong>Ground Relief:</strong> <span class="address-display">${groundRelief}</span> ${userGroundRelief ? '<span class="badge bg-success">You</span>' : ''}</div>
-                    <div class="mt-1"><strong>Recipient:</strong> <span class="address-display">${recipient}</span> ${userRecipient ? '<span class="badge bg-success">You</span>' : ''}</div>
-                </div>
-            `;
-            
-            // Status specific messages
-            switch (statusString) {
-                case 'Issued':
-                    statusMessage = `Token ID ${tokenId} has been issued and is ready for transportation.`;
-                    if (userTransporter) {
-                        statusMessage += ` As the assigned Transfer Team, you can mark this token as "In Transit".`;
-                    }
-                    break;
-                case 'InTransit':
-                    statusMessage = `Token ID ${tokenId} is currently in transit.`;
-                    if (userGroundRelief) {
-                        statusMessage += ` As the assigned Ground Relief team, you can mark this token as "Delivered" once you receive it.`;
-                    }
-                    break;
-                case 'Delivered':
-                    statusMessage = `Token ID ${tokenId} has been delivered to the ground relief team.`;
-                    if (userRecipient) {
-                        statusMessage += ` As the assigned Recipient, you can mark this token as "Claimed" once you receive the aid.`;
-                    }
-                    break;
-                case 'Claimed':
-                    statusMessage = `Token ID ${tokenId} has been claimed by the recipient. The aid delivery process is complete.`;
-                    break;
-                default:
-                    statusMessage = `Token ID ${tokenId} has an unknown status.`;
-            }
-        }
-        
-        document.getElementById('aidStatusResult').innerHTML = `
-            <strong>Status:</strong> ${statusString}<br>
-            <p>${statusMessage}</p>
-            ${assignmentInfo}
-        `;
-        document.getElementById('aidStatusResult').style.display = 'block';
-        
-        // Update journey visualization
-        updateAidJourney(parseInt(statusEnum));
-    } catch (error) {
-        console.error(error);
-        showNotification('Failed to check aid status: ' + error.message, 'danger');
-    }
+   try {
+       if (!aidTokenHandlerContract) {
+           showNotification('Please deploy or connect to AidTokenHandler contract first', 'warning');
+           return;
+       }
+       
+       const tokenId = document.getElementById('tokenIdTracking').value;
+       
+       if (!tokenId) {
+           showNotification('Please enter a token ID', 'warning');
+           return;
+       }
+       
+       // First check if token is issued
+       const isIssued = await aidTokenContract.methods.isTokenIssued(tokenId).call();
+       if (!isIssued) {
+           const statusResult = `
+               <div class="alert alert-warning">
+                   <strong>Status:</strong> Not Issued<br>
+                   <p>Token ID ${tokenId} has not been issued yet. Tokens are issued when donations reach the threshold.</p>
+               </div>
+           `;
+           document.getElementById('aidStatusResult').innerHTML = statusResult;
+           document.getElementById('aidStatusResult').style.display = 'block';
+           
+           // Update journey visualization with all steps inactive
+           updateAidJourney(-1);
+           return;
+       }
+       
+       const statusString = await aidTokenHandlerContract.methods.getAidStatusString(tokenId).call();
+       const statusEnum = await aidTokenHandlerContract.methods.aidStatus(tokenId).call();
+       
+       // Get assignment info
+       const transferTeam = await aidTokenContract.methods.getTransferTeam(tokenId).call();
+       const groundRelief = await aidTokenContract.methods.getGroundRelief(tokenId).call();
+       const recipient = await aidTokenContract.methods.getRecipient(tokenId).call();
+       
+       const zeroAddress = '0x0000000000000000000000000000000000000000';
+       let isAssigned = !(transferTeam === zeroAddress && groundRelief === zeroAddress && recipient === zeroAddress);
+       
+       let statusMessage;
+       let assignmentInfo = '';
+       
+       // Check if token is assigned
+       if (!isAssigned) {
+           statusMessage = `Token ID ${tokenId} has been issued but has not been assigned recipients yet.`;
+       } else {
+           // User role indicators
+           let userTransporter = transferTeam.toLowerCase() === userAccount.toLowerCase();
+           let userGroundRelief = groundRelief.toLowerCase() === userAccount.toLowerCase();
+           let userRecipient = recipient.toLowerCase() === userAccount.toLowerCase();
+           
+           // Assignment info with role badges
+           assignmentInfo = `
+               <div class="mt-3">
+                   <strong>Assigned Roles:</strong><br>
+                   <div class="mt-1"><strong>Transfer Team:</strong> <span class="address-display">${transferTeam}</span> ${userTransporter ? '<span class="badge bg-success">You</span>' : ''}</div>
+                   <div class="mt-1"><strong>Ground Relief:</strong> <span class="address-display">${groundRelief}</span> ${userGroundRelief ? '<span class="badge bg-success">You</span>' : ''}</div>
+                   <div class="mt-1"><strong>Recipient:</strong> <span class="address-display">${recipient}</span> ${userRecipient ? '<span class="badge bg-success">You</span>' : ''}</div>
+               </div>
+           `;
+           
+           // Status specific messages
+           switch (statusString) {
+               case 'Issued':
+                   statusMessage = `Token ID ${tokenId} has been issued and is ready for transportation.`;
+                   if (userTransporter) {
+                       statusMessage += ` As the assigned Transfer Team, you can mark this token as "In Transit".`;
+                   }
+                   break;
+               case 'InTransit':
+                   statusMessage = `Token ID ${tokenId} is currently in transit.`;
+                   if (userGroundRelief) {
+                       statusMessage += ` As the assigned Ground Relief team, you can mark this token as "Delivered" once you receive it.`;
+                   }
+                   break;
+               case 'Delivered':
+                   statusMessage = `Token ID ${tokenId} has been delivered to the ground relief team.`;
+                   if (userRecipient) {
+                       statusMessage += ` As the assigned Recipient, you can mark this token as "Claimed" once you receive the aid.`;
+                   }
+                   break;
+               case 'Claimed':
+                   statusMessage = `Token ID ${tokenId} has been claimed by the recipient. The aid delivery process is complete.`;
+                   break;
+               default:
+                   statusMessage = `Token ID ${tokenId} has an unknown status.`;
+           }
+       }
+       
+       document.getElementById('aidStatusResult').innerHTML = `
+           <strong>Status:</strong> ${statusString}<br>
+           <p>${statusMessage}</p>
+           ${assignmentInfo}
+       `;
+       document.getElementById('aidStatusResult').style.display = 'block';
+       
+       // Update journey visualization
+       updateAidJourney(parseInt(statusEnum));
+   } catch (error) {
+       console.error(error);
+       showNotification('Failed to check aid status: ' + error.message, 'danger');
+   }
 }
 
 // Update aid journey visualization
 function updateAidJourney(status) {
-    // Reset all steps to default
-    document.getElementById('issuedStep').className = 'rounded-circle bg-secondary text-white';
-    document.getElementById('inTransitStep').className = 'rounded-circle bg-secondary text-white';
-    document.getElementById('deliveredStep').className = 'rounded-circle bg-secondary text-white';
-    document.getElementById('claimedStep').className = 'rounded-circle bg-secondary text-white';
-    
-    // If status is -1, keep all steps inactive (not issued)
-    if (status === -1) return;
-    
-    switch (status) {
-        case 0: // Issued
-            document.getElementById('issuedStep').className = 'rounded-circle bg-success text-white';
-            break;
-        case 1: // InTransit
-            document.getElementById('issuedStep').className = 'rounded-circle bg-success text-white';
-            document.getElementById('inTransitStep').className = 'rounded-circle bg-success text-white';
-            break;
-        case 2: // Delivered
-            document.getElementById('issuedStep').className = 'rounded-circle bg-success text-white';
-            document.getElementById('inTransitStep').className = 'rounded-circle bg-success text-white';
-            document.getElementById('deliveredStep').className = 'rounded-circle bg-success text-white';
-            break;
-        case 3: // Claimed
-            document.getElementById('issuedStep').className = 'rounded-circle bg-success text-white';
-            document.getElementById('inTransitStep').className = 'rounded-circle bg-success text-white';
-            document.getElementById('deliveredStep').className = 'rounded-circle bg-success text-white';
-            document.getElementById('claimedStep').className = 'rounded-circle bg-success text-white';
-            break;
-    }
+   // Reset all steps to default
+   document.getElementById('issuedStep').className = 'rounded-circle bg-secondary text-white';
+   document.getElementById('inTransitStep').className = 'rounded-circle bg-secondary text-white';
+   document.getElementById('deliveredStep').className = 'rounded-circle bg-secondary text-white';
+   document.getElementById('claimedStep').className = 'rounded-circle bg-secondary text-white';
+   
+   // If status is -1, keep all steps inactive (not issued)
+   if (status === -1) return;
+   
+   switch (status) {
+       case 0: // Issued
+           document.getElementById('issuedStep').className = 'rounded-circle bg-success text-white';
+           break;
+       case 1: // InTransit
+           document.getElementById('issuedStep').className = 'rounded-circle bg-success text-white';
+           document.getElementById('inTransitStep').className = 'rounded-circle bg-success text-white';
+           break;
+       case 2: // Delivered
+           document.getElementById('issuedStep').className = 'rounded-circle bg-success text-white';
+           document.getElementById('inTransitStep').className = 'rounded-circle bg-success text-white';
+           document.getElementById('deliveredStep').className = 'rounded-circle bg-success text-white';
+           break;
+       case 3: // Claimed
+           document.getElementById('issuedStep').className = 'rounded-circle bg-success text-white';
+           document.getElementById('inTransitStep').className = 'rounded-circle bg-success text-white';
+           document.getElementById('deliveredStep').className = 'rounded-circle bg-success text-white';
+           document.getElementById('claimedStep').className = 'rounded-circle bg-success text-white';
+           break;
+   }
 }
 
 // Mark token as in transit
 async function markInTransit() {
-    try {
-        if (!aidTokenHandlerContract) {
-            showNotification('Please deploy or connect to AidTokenHandler contract first', 'warning');
-            return;
-        }
-        
-        const tokenId = document.getElementById('tokenIdTracking').value;
-        
-        if (!tokenId) {
-            showNotification('Please enter a token ID', 'warning');
-            return;
-        }
-        
-        // Check if user is the assigned transporter
-        const transferTeam = await aidTokenContract.methods.getTransferTeam(tokenId).call();
-        if (transferTeam.toLowerCase() !== userAccount.toLowerCase()) {
-            showNotification('Only the assigned Transfer Team can mark this token as In Transit', 'warning');
-            return;
-        }
-        
-        showNotification(`Authenticating as transfer team for token ID ${tokenId}...`, 'info');
-        
-        const method = aidTokenHandlerContract.methods.authenticateTransferTeam(tokenId);
-        const gas = await method.estimateGas({ from: userAccount });
-        await method.send({ from: userAccount, gas: Math.round(gas * 1.2) });
-        
-        showNotification(`Successfully marked token ID ${tokenId} as in transit!`, 'success');
-        
-        // Refresh aid status
-        checkAidStatus();
-    } catch (error) {
-        console.error(error);
-        showNotification('Failed to authenticate as transfer team: ' + error.message, 'danger');
-    }
+   try {
+       if (!aidTokenHandlerContract) {
+           showNotification('Please deploy or connect to AidTokenHandler contract first', 'warning');
+           return;
+       }
+       
+       const tokenId = document.getElementById('tokenIdTracking').value;
+       
+       if (!tokenId) {
+           showNotification('Please enter a token ID', 'warning');
+           return;
+       }
+       
+       // Check if user is the assigned transporter
+       const transferTeam = await aidTokenContract.methods.getTransferTeam(tokenId).call();
+       if (transferTeam.toLowerCase() !== userAccount.toLowerCase()) {
+           showNotification('Only the assigned Transfer Team can mark this token as In Transit', 'warning');
+           return;
+       }
+       
+       showNotification(`Authenticating as transfer team for token ID ${tokenId}...`, 'info');
+       
+       const method = aidTokenHandlerContract.methods.authenticateTransferTeam(tokenId);
+       const gas = await method.estimateGas({ from: userAccount });
+       await method.send({ from: userAccount, gas: Math.round(gas * 1.2) });
+       
+       showNotification(`Successfully marked token ID ${tokenId} as in transit!`, 'success');
+       
+       // Refresh aid status
+       checkAidStatus();
+   } catch (error) {
+       console.error(error);
+       showNotification('Failed to authenticate as transfer team: ' + error.message, 'danger');
+   }
 }
 
 // Mark token as delivered
 async function markDelivered() {
-    try {
-        if (!aidTokenHandlerContract) {
-            showNotification('Please deploy or connect to AidTokenHandler contract first', 'warning');
-            return;
-        }
-        
-        const tokenId = document.getElementById('tokenIdTracking').value;
-        
-        if (!tokenId) {
-            showNotification('Please enter a token ID', 'warning');
-            return;
-        }
-        
-        // Check if user is the assigned ground relief
-        const groundRelief = await aidTokenContract.methods.getGroundRelief(tokenId).call();
-        if (groundRelief.toLowerCase() !== userAccount.toLowerCase()) {
-            showNotification('Only the assigned Ground Relief team can mark this token as Delivered', 'warning');
-            return;
-        }
-        
-        showNotification(`Authenticating as ground relief for token ID ${tokenId}...`, 'info');
-        
-        const method = aidTokenHandlerContract.methods.authenticateGroundRelief(tokenId);
-        const gas = await method.estimateGas({ from: userAccount });
-        await method.send({ from: userAccount, gas: Math.round(gas * 1.2) });
-        
-        showNotification(`Successfully marked token ID ${tokenId} as delivered!`, 'success');
-        
-        // Refresh aid status
-        checkAidStatus();
-    } catch (error) {
-        console.error(error);
-        showNotification('Failed to authenticate as ground relief: ' + error.message, 'danger');
-    }
+   try {
+       if (!aidTokenHandlerContract) {
+           showNotification('Please deploy or connect to AidTokenHandler contract first', 'warning');
+           return;
+       }
+       
+       const tokenId = document.getElementById('tokenIdTracking').value;
+       
+       if (!tokenId) {
+           showNotification('Please enter a token ID', 'warning');
+           return;
+       }
+       
+       // Check if user is the assigned ground relief
+       const groundRelief = await aidTokenContract.methods.getGroundRelief(tokenId).call();
+       if (groundRelief.toLowerCase() !== userAccount.toLowerCase()) {
+           showNotification('Only the assigned Ground Relief team can mark this token as Delivered', 'warning');
+           return;
+       }
+       
+       showNotification(`Authenticating as ground relief for token ID ${tokenId}...`, 'info');
+       
+       const method = aidTokenHandlerContract.methods.authenticateGroundRelief(tokenId);
+       const gas = await method.estimateGas({ from: userAccount });
+       await method.send({ from: userAccount, gas: Math.round(gas * 1.2) });
+       
+       showNotification(`Successfully marked token ID ${tokenId} as delivered!`, 'success');
+       
+       // Refresh aid status
+       checkAidStatus();
+   } catch (error) {
+       console.error(error);
+       showNotification('Failed to authenticate as ground relief: ' + error.message, 'danger');
+   }
 }
 
 // Mark token as claimed
 async function markClaimed() {
-    try {
-        if (!aidTokenHandlerContract) {
-            showNotification('Please deploy or connect to AidTokenHandler contract first', 'warning');
-            return;
-        }
-        
-        const tokenId = document.getElementById('tokenIdTracking').value;
-        
-        if (!tokenId) {
-            showNotification('Please enter a token ID', 'warning');
-            return;
-        }
-        
-        // Check if user is the assigned recipient
-        const recipient = await aidTokenContract.methods.getRecipient(tokenId).call();
-        if (recipient.toLowerCase() !== userAccount.toLowerCase()) {
-            showNotification('Only the assigned Recipient can claim this token', 'warning');
-            return;
-        }
-        
-        showNotification(`Claiming aid for token ID ${tokenId}...`, 'info');
-        
-        const method = aidTokenHandlerContract.methods.claimAid(tokenId);
-        const gas = await method.estimateGas({ from: userAccount });
-        await method.send({ from: userAccount, gas: Math.round(gas * 1.2) });
-        
-        showNotification(`Successfully claimed token ID ${tokenId}!`, 'success');
-        
-        // Refresh aid status
-        checkAidStatus();
-    } catch (error) {
-        console.error(error);
-        showNotification('Failed to claim aid: ' + error.message, 'danger');
-    }
+   try {
+       if (!aidTokenHandlerContract) {
+           showNotification('Please deploy or connect to AidTokenHandler contract first', 'warning');
+           return;
+       }
+       
+       const tokenId = document.getElementById('tokenIdTracking').value;
+       
+       if (!tokenId) {
+           showNotification('Please enter a token ID', 'warning');
+           return;
+       }
+       
+       // Check if user is the assigned recipient
+       const recipient = await aidTokenContract.methods.getRecipient(tokenId).call();
+       if (recipient.toLowerCase() !== userAccount.toLowerCase()) {
+           showNotification('Only the assigned Recipient can claim this token', 'warning');
+           return;
+       }
+       
+       showNotification(`Claiming aid for token ID ${tokenId}...`, 'info');
+       
+       const method = aidTokenHandlerContract.methods.claimAid(tokenId);
+       const gas = await method.estimateGas({ from: userAccount });
+       await method.send({ from: userAccount, gas: Math.round(gas * 1.2) });
+       
+       showNotification(`Successfully claimed token ID ${tokenId}!`, 'success');
+       
+       // Refresh aid status
+       checkAidStatus();
+   } catch (error) {
+       console.error(error);
+       showNotification('Failed to claim aid: ' + error.message, 'danger');
+   }
 }
 
 // Refresh contract information
@@ -1475,158 +1259,123 @@ function selectAddress(address, location) {
     if (selectionModalTarget === 'transferTeamAddress' || selectionModalTarget === 'groundReliefAddress' || selectionModalTarget === 'recipientAddress') {
         document.getElementById('locationAssign').value = location;
     }
-    
-    // Hide modal
-    const modal = bootstrap.Modal.getInstance(document.getElementById('selectionModal'));
-    modal.hide();
 }
 
-// Show account switching modal
-async function showSwitchAccountModal() {
+// Disconnect wallet function
+async function disconnectWallet() {
     try {
-        if (!web3) {
-            showNotification('Please connect your wallet first', 'warning');
-            return;
-        }
+        // Reset user account and UI
+        userAccount = null;
+        web3 = null;
         
-        // Get accounts
-        const accounts = await web3.eth.getAccounts();
-        accountList = accounts;
+        // Clear localStorage items related to current session (except contract addresses)
+        localStorage.removeItem(STORAGE_KEYS.LAST_ACCOUNT);
         
-        // Clear account list
-        const accountListElement = document.getElementById('accountList');
-        accountListElement.innerHTML = '';
+        // Reset UI
+        resetUI();
         
-        // Populate accounts
-        for (const account of accounts) {
+        // Show notification
+        showNotification('Wallet disconnected successfully!', 'success');
+        
+        // Additional UI updates for disconnected state
+        document.getElementById('connectWallet').style.display = 'inline-block';
+        document.getElementById('disconnectWallet').style.display = 'none';
+        
+        // This is the best we can do to "disconnect" from MetaMask
+        // We can't programmatically disconnect completely due to MetaMask limitations
+        // But we can clear any site permissions using wallet_revokePermissions if available
+        if (window.ethereum && window.ethereum.request) {
             try {
-                // Get ETH balance
-                const balance = await web3.eth.getBalance(account);
-                const balanceEth = parseFloat(web3.utils.fromWei(balance, 'ether')).toFixed(4);
-                
-                // Get role if DID contract is available
-                let roleBadge = '';
-                if (didRegistryContract) {
-                    try {
-                        const roleId = await didRegistryContract.methods.getRole(account).call();
-                        let roleText = 'None';
-                        let roleBadgeClass = 'role-none';
-                        
-                        switch (parseInt(roleId)) {
-                            case 0:
-                                roleText = 'None';
-                                roleBadgeClass = 'role-none';
-                                break;
-                            case 1:
-                                roleText = 'Transporter';
-                                roleBadgeClass = 'role-transporter';
-                                break;
-                            case 2:
-                                roleText = 'Ground Relief';
-                                roleBadgeClass = 'role-groundrelief';
-                                break;
-                            case 3:
-                                roleText = 'Recipient';
-                                roleBadgeClass = 'role-recipient';
-                                break;
-                        }
-                        
-                        // Check if user is relief agency
-                        if (aidTokenContract) {
-                            const reliefAgency = await aidTokenContract.methods.reliefAgency().call();
-                            if (account.toLowerCase() === reliefAgency.toLowerCase()) {
-                                roleText = 'Relief Agency';
-                                roleBadgeClass = 'role-reliefagency';
-                            }
-                        }
-                        
-                        roleBadge = `<span class="role-badge ${roleBadgeClass} ms-2">${roleText}</span>`;
-                    } catch (error) {
-                        console.error('Error getting role:', error);
-                    }
-                }
-                
-                // Create list item
-                const isActive = account.toLowerCase() === userAccount.toLowerCase();
-                const listItem = document.createElement('button');
-                listItem.className = `list-group-item list-group-item-action ${isActive ? 'active' : ''}`;
-                listItem.type = 'button';
-                listItem.setAttribute('data-account', account);
-                listItem.innerHTML = `
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <div class="address-display">${account}</div>
-                            <div class="d-flex align-items-center mt-1">
-                                <span class="account-badge me-2">
-                                    <span class="badge-icon"></span>
-                                    ${balanceEth} ETH
-                                </span>
-                                ${roleBadge}
-                            </div>
-                        </div>
-                        ${isActive ? 
-                            '<span class="badge bg-primary">Current</span>' : 
-                            '<button class="btn btn-sm btn-primary switch-to-account">Switch</button>'}
-                    </div>
-                `;
-                
-                accountListElement.appendChild(listItem);
-            } catch (error) {
-                console.error(`Error processing account ${account}:`, error);
+                // This is an experimental feature and may not work in all versions
+                await window.ethereum.request({
+                    method: 'wallet_revokePermissions',
+                    params: [{ eth_accounts: {} }]
+                });
+                console.log('Permissions revoked successfully');
+            } catch (permissionError) {
+                console.log('Could not revoke permissions: ', permissionError);
+                // This is expected in many cases as the method is not widely supported
             }
         }
         
-        // Show modal
-        const modal = new bootstrap.Modal(document.getElementById('accountSwitchModal'));
-        modal.show();
-    } catch (error) {
-        console.error('Error showing account switch modal:', error);
-        showNotification('Failed to load accounts: ' + error.message, 'danger');
-    }
-}
-
-// Switch to a different account
-async function switchToAccount(account) {
-    try {
-        if (!web3) {
-            showNotification('Please connect your wallet first', 'warning');
-            return;
+        // Force page reload to completely reset the connection state
+        // This is the most reliable way to disconnect currently
+        if (confirm('This will reset the connection and refresh the app to disconnect the wallet. Continue?')) {
+            window.location.reload();
         }
         
-        // Request account switch
-        await window.ethereum.request({
-            method: 'wallet_requestPermissions',
-            params: [{
-                eth_accounts: {}
-            }]
-        });
-        
-        await window.ethereum.request({
-            method: 'wallet_switchEthereumChain',
-            params: [{ chainId: web3.utils.toHex(currentChainId) }],
-        });
-        
-        // This will trigger the accountsChanged event which will update the UI
-        showNotification('Please select the account in your wallet', 'info');
+        return true;
     } catch (error) {
-        console.error('Error switching account:', error);
-        showNotification('Failed to switch account: ' + error.message, 'danger');
+        console.error(error);
+        showNotification('Failed to disconnect wallet: ' + error.message, 'danger');
+        return false;
     }
 }
 
-// Create a new account in MetaMask
-async function createNewAccount() {
+// Reset UI when disconnected - updated function
+function resetUI() {
+    userAccount = null;
+    document.getElementById('userAccount').textContent = 'Not connected';
+    document.getElementById('currentAccountDisplay').textContent = 'Not connected';
+    document.getElementById('accountBalance').textContent = '-';
+    document.getElementById('accountRole').textContent = '-';
+    document.getElementById('networkName').textContent = 'Not detected';
+    document.getElementById('chainId').textContent = '-';
+    
+    // Hide disconnect button, show connect button
+    document.getElementById('connectWallet').style.display = 'inline-block';
+    document.getElementById('disconnectWallet').style.display = 'none';
+}
+
+// Connect to MetaMask wallet - update to show/hide appropriate buttons
+async function connectWallet() {
     try {
-        // This is just a guidance for the user as we can't programatically create accounts
-        const modal = bootstrap.Modal.getInstance(document.getElementById('accountSwitchModal'));
-        modal.hide();
-        
-        showNotification('Please use MetaMask extension to create a new account', 'info');
-        
-        // Open guide in a new window
-        window.open('https://support.metamask.io/hc/en-us/articles/360015289452-How-to-create-an-additional-account-in-your-wallet', '_blank');
+        // Check if MetaMask is installed
+        if (window.ethereum) {
+            web3 = new Web3(window.ethereum);
+            
+            // Request account access
+            const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+            userAccount = accounts[0];
+            
+            // Update UI
+            document.getElementById('userAccount').textContent = userAccount;
+            document.getElementById('currentAccountDisplay').textContent = userAccount;
+            
+            // Save to localStorage
+            localStorage.setItem(STORAGE_KEYS.LAST_ACCOUNT, userAccount);
+            
+            // Get network info
+            await updateNetworkInfo();
+            
+            // Check account balance
+            await updateAccountBalance();
+            
+            // Update account role
+            await updateAccountRole();
+            
+            // Show notification
+            showNotification('Wallet connected successfully!', 'success');
+            
+            // Load saved contract addresses
+            loadContractAddresses();
+            
+            // Setup event listeners for MetaMask events
+            setupMetaMaskEventListeners();
+            
+            // Show disconnect button, hide connect button
+            document.getElementById('connectWallet').style.display = 'none';
+            document.getElementById('disconnectWallet').style.display = 'inline-block';
+            
+            return accounts;
+        } else {
+            showNotification('Please install MetaMask to use this dApp', 'danger');
+            return null;
+        }
     } catch (error) {
-        console.error('Error in createNewAccount:', error);
+        console.error(error);
+        showNotification('Failed to connect wallet: ' + error.message, 'danger');
+        return null;
     }
 }
 
@@ -1644,12 +1393,28 @@ function showNotification(message, type) {
     
     document.getElementById('notificationContainer').appendChild(notification);
     
+    // Create Bootstrap Alert instance
+    const alertInstance = new bootstrap.Alert(notification);
+    
     // Auto-dismiss after 5 seconds
     setTimeout(() => {
-        const alertElement = document.getElementById(notificationId);
-        if (alertElement) {
-            const alert = bootstrap.Alert.getOrCreateInstance(alertElement);
-            alert.close();
+        try {
+            const alertElement = document.getElementById(notificationId);
+            if (alertElement) {
+                // Use the Bootstrap Alert instance to close
+                alertInstance.close();
+            }
+        } catch (error) {
+            console.error('Error closing alert:', error);
+            // Fallback: try to remove manually if there's an error
+            try {
+                const alertElement = document.getElementById(notificationId);
+                if (alertElement && alertElement.parentNode) {
+                    alertElement.parentNode.removeChild(alertElement);
+                }
+            } catch (removeError) {
+                console.error('Error manually removing alert:', removeError);
+            }
         }
     }, 5000);
 }
@@ -1664,12 +1429,11 @@ function formatAddress(address) {
 document.addEventListener('DOMContentLoaded', function() {
     // Connect wallet
     document.getElementById('connectWallet').addEventListener('click', connectWallet);
-    // document.getElementById('switchAccount').addEventListener('click', showSwitchAccountModal);
+    
+    // Disconnect wallet
+    document.getElementById('disconnectWallet').addEventListener('click', disconnectWallet);
     
     // Contract setup
-    // document.getElementById('deployDIDRegistry').addEventListener('click', deployDIDRegistry);
-    // document.getElementById('deployAidToken').addEventListener('click', deployAidToken);
-    // document.getElementById('deployAidTokenHandler').addEventListener('click', deployAidTokenHandler);
     document.getElementById('connectToContracts').addEventListener('click', connectToContracts);
     document.getElementById('clearContractData').addEventListener('click', clearContractData);
     
@@ -1704,35 +1468,15 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('refreshStatus').addEventListener('click', refreshContractInfo);
     document.getElementById('fetchEvents').addEventListener('click', fetchEvents);
     
-    // Modal selection
+    // Modal selection - 계정 전환 관련 코드 제거됨
     document.addEventListener('click', function(event) {
+        // Handle address selection in the modal
         if (event.target.classList.contains('select-address')) {
             const address = event.target.getAttribute('data-address');
             const location = event.target.getAttribute('data-location');
             selectAddress(address, location);
         }
-        
-        if (event.target.classList.contains('switch-to-account')) {
-            // Find the parent list item
-            const listItem = event.target.closest('.list-group-item');
-            if (listItem) {
-                const account = listItem.getAttribute('data-account');
-                switchToAccount(account);
-            }
-        }
     });
-    
-    // Account list items click
-    document.getElementById('accountList').addEventListener('click', function(event) {
-        const listItem = event.target.closest('.list-group-item');
-        if (listItem && !listItem.classList.contains('active')) {
-            const account = listItem.getAttribute('data-account');
-            switchToAccount(account);
-        }
-    });
-    
-    // Create new account in MetaMask
-    document.getElementById('createNewAccount').addEventListener('click', createNewAccount);
     
     // Check if MetaMask is installed
     if (window.ethereum) {
@@ -1744,6 +1488,10 @@ document.addEventListener('DOMContentLoaded', function() {
                     userAccount = accounts[0];
                     document.getElementById('userAccount').textContent = userAccount;
                     document.getElementById('currentAccountDisplay').textContent = userAccount;
+                    
+                    // display/hide setting based on current status
+                    document.getElementById('connectWallet').style.display = 'none';
+                    document.getElementById('disconnectWallet').style.display = 'inline-block';
                     
                     // Initialize the app
                     updateNetworkInfo().then(() => {

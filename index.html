@@ -20,7 +20,7 @@
                 </div>
                 <div>
                     <button id="connectWallet" class="btn btn-primary me-2">Connect Wallet</button>
-                    <!-- <button id="switchAccount" class="btn btn-outline-primary">Switch Account</button> -->
+                    <button id="disconnectWallet" class="btn btn-danger me-2" style="display: none;">Disconnect Wallet</button>
                 </div>
             </div>
         </div>
@@ -55,38 +55,8 @@
             <!-- Contract Setup Tab -->
             <div class="tab-pane fade show active" id="contracts" role="tabpanel" aria-labelledby="contracts-tab">
                 <div class="card">
-                    <div class="card-header">Deploy Contracts</div>
+                    <div class="card-header">Connect to Contracts</div>
                     <div class="card-body">
-                        <!-- <div class="mb-3">
-                            <h5>Step 1: Deploy DIDRegistry</h5>
-                            <button id="deployDIDRegistry" class="btn btn-primary">Deploy DIDRegistry</button>
-                            <div id="didRegistryAddress" class="mt-2"></div>
-                        </div>
-                        <hr>
-                        <div class="mb-3">
-                            <h5>Step 2: Deploy AidToken</h5>
-                            <div class="mb-3">
-                                <label for="reliefAgencyAddress" class="form-label">Relief Agency Address:</label>
-                                <input type="text" id="reliefAgencyAddress" class="form-control" placeholder="Enter relief agency address">
-                            </div>
-                            <div class="mb-3">
-                                <label for="didRegistryAddressInput" class="form-label">DIDRegistry Address:</label>
-                                <input type="text" id="didRegistryAddressInput" class="form-control" placeholder="Enter DIDRegistry contract address">
-                            </div>
-                            <button id="deployAidToken" class="btn btn-primary">Deploy AidToken</button>
-                            <div id="aidTokenAddress" class="mt-2"></div>
-                        </div>
-                        <hr>
-                        <div class="mb-3">
-                            <h5>Step 3: Deploy AidTokenHandler</h5>
-                            <div class="mb-3">
-                                <label for="aidTokenAddressInput" class="form-label">AidToken Address:</label>
-                                <input type="text" id="aidTokenAddressInput" class="form-control" placeholder="Enter AidToken contract address">
-                            </div>
-                            <button id="deployAidTokenHandler" class="btn btn-primary">Deploy AidTokenHandler</button>
-                            <div id="aidTokenHandlerAddress" class="mt-2"></div>
-                        </div> -->
-                        <hr>
                         <div class="mb-3">
                             <h5>Connect to Existing Contracts</h5>
                             <div class="row g-3">

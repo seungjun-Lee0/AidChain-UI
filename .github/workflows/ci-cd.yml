@@ -24,33 +24,23 @@ jobs:
         run: npm install -g solhint
         
       - name: Lint Solidity
-        run: solhint 'Assessment3.sol'
+        run: solhint 'Assessment3.sol' -f table
         
       - name: Setup Hardhat environment
         run: |
           npm install --save-dev hardhat @nomiclabs/hardhat-waffle @nomiclabs/hardhat-ethers ethereum-waffle ethers chai
-          mkdir -p test
           mkdir -p contracts
           cp Assessment3.sol contracts/
           
-      - name: Copy test file
-        run: |
-          mkdir -p test
-          cat > test/AidChain-test.js << 'EOL'
-          const { expect } = require("chai");
-          const { ethers } = require("hardhat");
-
-          describe("AidChain Contracts", function () {
-            // 기본 테스트 - 컴파일만 확인
-            it("Should compile the contracts", async function () {
-              console.log("Contracts compile successfully");
-              expect(true).to.equal(true);
-            });
-          });
-          EOL
-          
-      - name: Run Hardhat tests
-        run: npx hardhat test
+      - name: Run Hardhat tests with verbose output
+        run: npx hardhat test --verbose
         
+      - name: Show contract compilation info
+        run: |
+          echo "=== Contract Information ==="
+          echo "Showing available contracts:"
+          npx hardhat compile --show-stack-traces
+          echo "=== End Contract Information ==="
+          
       - name: Notify test completion
         run: echo "All tests passed! Vercel will handle the deployment automatically." 

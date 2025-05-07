@@ -18,7 +18,7 @@ jobs:
           node-version: '16'
           
       - name: Install dependencies
-        run: npm ci
+        run: npm install
         
       - name: Lint Solidity
         run: npx solhint 'Assessment3.sol'
@@ -39,7 +39,7 @@ jobs:
           node-version: '16'
           
       - name: Install dependencies
-        run: npm ci
+        run: npm install
         
       - name: Build frontend
         run: npm run build

@@ -25,7 +25,7 @@ module.exports = {
     }
   },
   paths: {
-    sources: "./",
+    sources: "./contracts",
     tests: "./test",
     cache: "./cache",
     artifacts: "./artifacts"
@@ -33,9 +33,5 @@ module.exports = {
   // 노드 모듈 내부 파일 처리를 위한 설정
   mocha: {
     timeout: 40000
-  },
-  // 노드 모듈 내 컨트랙트 명시적 무시
-  compilerOptions: {
-    ignoreNonAllowedSymbols: true
   }
 }; 

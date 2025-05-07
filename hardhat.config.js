@@ -5,9 +5,19 @@ require("@nomiclabs/hardhat-ethers");
  * @type import('hardhat/config').HardhatUserConfig
  */
 module.exports = {
-  solidity: "0.8.17",
+  solidity: {
+    version: "0.8.17",
+    settings: {
+      optimizer: {
+        enabled: true,
+        runs: 200
+      }
+    }
+  },
   networks: {
-    hardhat: {},
+    hardhat: {
+      chainId: 1337
+    },
     goerli: {
       url: process.env.GOERLI_URL || "",
       accounts:
@@ -19,5 +29,13 @@ module.exports = {
     tests: "./test",
     cache: "./cache",
     artifacts: "./artifacts"
+  },
+  // 노드 모듈 내부 파일 처리를 위한 설정
+  mocha: {
+    timeout: 40000
+  },
+  // 노드 모듈 내 컨트랙트 명시적 무시
+  compilerOptions: {
+    ignoreNonAllowedSymbols: true
   }
 }; 

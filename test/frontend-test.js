@@ -1,5 +1,6 @@
 // Import JSDOM to simulate browser environment
 const { JSDOM } = require('jsdom');
+const { expect } = require("chai");
 
 // Set up the DOM environment before running tests
 const dom = new JSDOM('<!DOCTYPE html><html><body></body></html>', {
@@ -15,12 +16,14 @@ global.window = dom.window;
 global.document = dom.window.document;
 global.navigator = dom.window.navigator;
 global.mockStorage = {};
+
+// Mock localStorage
 global.localStorage = {
-  getItem: jest.fn(key => mockStorage[key]),
-  setItem: jest.fn((key, value) => mockStorage[key] = value)
+  getItem: (key) => mockStorage[key] || null,
+  setItem: (key, value) => { mockStorage[key] = value; }
 };
 
-// Mocking jasmine's spyOn function for non-Jest environments
+// Mocking jasmine's spyOn function for Mocha/Chai environment
 global.spyOn = (obj, method) => {
   const original = obj[method];
   return {
@@ -225,13 +228,13 @@ describe('UI Module Tests', () => {
   it('should show notifications correctly', () => {
     global.app.ui.showNotification('Test message', 'success');
     const alert = document.querySelector('.alert-success');
-    expect(alert).not.toBeNull();
-    expect(alert.textContent).toBe('Test message');
+    expect(alert).to.not.be.null;
+    expect(alert.textContent).to.equal('Test message');
   });
   
   it('should format addresses correctly', () => {
     const address = '0x1234567890123456789012345678901234567890';
-    expect(global.app.ui.formatAddress(address)).toBe('0x1234...7890');
+    expect(global.app.ui.formatAddress(address)).to.equal('0x1234...7890');
   });
 });
 
@@ -261,10 +264,10 @@ describe('Contracts Module Tests', () => {
     `;
     
     const result = await global.app.contracts.connectToContracts();
-    expect(result.success).toBe(true);
-    expect(global.app.didRegistryContract).not.toBeNull();
-    expect(global.app.aidTokenContract).not.toBeNull();
-    expect(global.app.aidTokenHandlerContract).not.toBeNull();
+    expect(result.success).to.equal(true);
+    expect(global.app.didRegistryContract).to.not.be.null;
+    expect(global.app.aidTokenContract).to.not.be.null;
+    expect(global.app.aidTokenHandlerContract).to.not.be.null;
   });
 });
 
@@ -294,18 +297,18 @@ describe('Wallet Module Tests', () => {
   
   it('should connect to wallet correctly', async () => {
     const result = await global.app.wallet.connectWallet();
-    expect(result.success).toBe(true);
-    expect(global.app.userAccount).toBe('0x1234567890123456789012345678901234567890');
-    expect(document.getElementById('userAccount').textContent).toBe('0x1234567890123456789012345678901234567890');
+    expect(result.success).to.equal(true);
+    expect(global.app.userAccount).to.equal('0x1234567890123456789012345678901234567890');
+    expect(document.getElementById('userAccount').textContent).to.equal('0x1234567890123456789012345678901234567890');
   });
   
   it('should update network info correctly', async () => {
     const result = await global.app.wallet.updateNetworkInfo();
-    expect(result.success).toBe(true);
-    expect(global.app.currentChainId).toBe('0x1');
-    expect(global.app.currentNetworkName).toBe('Ethereum Mainnet');
-    expect(document.getElementById('chainId').textContent).toBe('0x1');
-    expect(document.getElementById('networkName').textContent).toBe('Ethereum Mainnet');
+    expect(result.success).to.equal(true);
+    expect(global.app.currentChainId).to.equal('0x1');
+    expect(global.app.currentNetworkName).to.equal('Ethereum Mainnet');
+    expect(document.getElementById('chainId').textContent).to.equal('0x1');
+    expect(document.getElementById('networkName').textContent).to.equal('Ethereum Mainnet');
   });
 });
 
@@ -362,10 +365,10 @@ describe('Integration Tests', () => {
     `;
     
     const result = await global.app.tracking.loadActiveTokensForSelection();
-    expect(result.success).toBe(true);
-    expect(global.app.allTokenData.length).toBe(3);
-    expect(global.app.tokenLocations.size).toBe(1);
-    expect(document.getElementById('tokenSelectorSection').style.display).toBe('block');
+    expect(result.success).to.equal(true);
+    expect(global.app.allTokenData.length).to.equal(3);
+    expect(global.app.tokenLocations.size).to.equal(1);
+    expect(document.getElementById('tokenSelectorSection').style.display).to.equal('block');
   });
   
   it('should check donation status correctly', async () => {
@@ -377,8 +380,8 @@ describe('Integration Tests', () => {
     `;
     
     const result = await global.app.donation.checkTokenStatus();
-    expect(result.success).toBe(true);
-    expect(document.getElementById('tokenIdCounter').textContent).toBe('5');
-    expect(document.getElementById('tokenProgress').style.width).toBe('50%');
+    expect(result.success).to.equal(true);
+    expect(document.getElementById('tokenIdCounter').textContent).to.equal('5');
+    expect(document.getElementById('tokenProgress').style.width).to.equal('50%');
   });
 }); 

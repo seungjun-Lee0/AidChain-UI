@@ -30,7 +30,6 @@ module.exports = {
     cache: "./cache",
     artifacts: "./artifacts"
   },
-  // 노드 모듈 내부 파일 처리를 위한 설정
   mocha: {
     timeout: 40000
   }

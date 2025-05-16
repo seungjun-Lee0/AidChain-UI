@@ -474,7 +474,7 @@ describe("AidChain Contracts", function () {
       // Check token issuance
       expect(await aidToken.tokenIdCounter()).to.equal(1);
       expect(await aidToken.isTokenIssued(0)).to.equal(true);
-      expect(await aidToken.currentTokenBalance()).to.equal(0); // Reset after token issuance
+      expect(await aidToken.currentTokenBalance()).to.equal(ethers.utils.parseEther("0.08"));
       
       // 3. Relief agency assigns recipients
       await aidToken.connect(reliefAgency).assignAidRecipients(

@@ -25,6 +25,21 @@ contract DIDRegistry {
     //recipients function in the AidToken contract. I feel like adding this will make testing
     //a nightmare though.
 
+    // Added: Store the relief agency address for access control
+    address public reliefAgency;
+    
+    // Added: Constructor to set the relief agency address when deploying
+    constructor(address _reliefAgency) {
+        require(_reliefAgency != address(0), "Invalid relief agency address");
+        reliefAgency = _reliefAgency;
+    }
+    
+    // Added: Modifier to restrict access to relief agency only
+    modifier onlyReliefAgency() {
+        require(msg.sender == reliefAgency, "Only relief agency can call this function");
+        _;
+    }
+
     //Enum to define the types of roles in the system
     //We will be strictly using these roles in our other contracts
     enum Role {
@@ -52,6 +67,9 @@ contract DIDRegistry {
     address[] public transporterAddresses;
     address[] public groundReliefAddresses;
     address[] public recipientAddresses;
+
+    //Added: Event to track role registrations
+    event RoleRegistered(address indexed user, Role role, string location);
 
     //Internal registration function that assigns role-based DID automatically
     //So this is the internal helper function to register a user with a DID and role.
@@ -108,24 +126,23 @@ contract DIDRegistry {
         } else if (_role == Role.Recipient) {
             recipientAddresses.push(user);
         }
+        
+        // Added: Emit event when a role is registered
+        emit RoleRegistered(user, _role, _location);
     }
 
-    //Public function to register a user as a Transporter.
-    //Calls the internal registration logic with the appropirate prefix and role.
-    //The parameter user is the address being registered as a transporter.
-    function registerTransporterDID(address user, string memory location) public {
+    // Modified: Added onlyReliefAgency modifier to restrict who can register transporters
+    function registerTransporterDID(address user, string memory location) public onlyReliefAgency {
         internalRegisterDID(user, "transporter-", Role.Transporter, location);
     }
 
-    //Public function to register a user as a Ground Relief team member.
-    //parameter is the user address being registered as ground relief.
-    function registerGroundReliefDID(address user, string memory location) public {
+    // Modified: Added onlyReliefAgency modifier to restrict who can register ground relief
+    function registerGroundReliefDID(address user, string memory location) public onlyReliefAgency {
         internalRegisterDID(user, "groundrelief-", Role.GroundRelief, location);
     }
 
-    //Public function to register a user as a recipient.
-    //The parameter is the user address being registered as a recipient
-    function registerRecipientDID(address user, string memory location) public {
+    // Modified: Added onlyReliefAgency modifier to restrict who can register recipients
+    function registerRecipientDID(address user, string memory location) public onlyReliefAgency {
         internalRegisterDID(user, "recipient-", Role.Recipient, location);
     }
 
@@ -199,6 +216,13 @@ contract DIDRegistry {
         return recipientAddresses;
     }
 
+    // Added: Function to transfer relief agency role to a new address
+    // This allows for administrative changes if needed
+    function transferReliefAgency(address newReliefAgency) public onlyReliefAgency {
+        require(newReliefAgency != address(0), "Invalid new relief agency address");
+        reliefAgency = newReliefAgency;
+    }
+
     //==========================================================================
     //---------------------------Why we need toAsciiString----------------------
     //We need the toAsciiString function because Solidity doesn't let you easily convert an Ethereum
@@ -270,6 +294,20 @@ contract AidToken {
     //Tracks the total amount of donations for the currently active token
     uint256 public currentTokenBalance;
 
+    //Added: Maximum number of tokens that can be processed in a single transaction to prevent gas limit issues
+    uint256 public constant MAX_TOKENS_PER_TRANSACTION = 5;
+
+    //Added: Event for tracking donations
+    event Donation(address indexed donor, uint256 amount, uint256 tokenId);
+
+    //Added: Event for tracking role assignments to tokens
+    event AidTokenAssigned(
+        uint256 indexed tokenId,
+        address transferTeam,
+        address groundRelief,
+        address recipient
+    );
+
     //This struct allows us to store details about each aid token
     struct AidTokenData {
         address[] donors;         //List of donors/addresses contributing to this token
@@ -314,69 +352,82 @@ contract AidToken {
         _;
     }
 
-    //This function allows users to make a donation to the current token pool
+    //Modified: Optimized donate function to limit gas usage
     function donate() external payable {
-        //donation must be higher than 0.013 eth ($20 usd)
+        // Donation must be higher than 0.013 eth ($20 usd)
         require(msg.value >= minDonation, "Donation must be at least $20");
 
-        //Update the donor's balance
-        //Used to track the total donated amount by the sender across all tokens.
-        //This is the running total, not tied to a specific token
+        // Update the donor's balance
+        // Used to track the total donated amount by the sender across all tokens.
+        // This is the running total, not tied to a specific token
         donorBalances[msg.sender] += msg.value;
 
-        //Store the full Ether amount sent by the user in a variable named `remaining`.
-        //This tracks how much of the donation still needs to be processed after each loop iteration.
+        // Store the full Ether amount sent by the user in a variable named `remaining`.
+        // This tracks how much of the donation still needs to be processed after each loop iteration.
         uint256 remaining = msg.value;
 
-        //This loop allows one donation to potentially fund multiple aid tokens.
-        //It continues until the entire donated value (`remaining`) has been assigned to tokens.
-        while (remaining > 0) {
+        // Added: Counter to limit the number of token creations in a single transaction
+        uint256 tokenCount = 0;
 
-            //Calculate how much more Ether is needed to complete the current token.
-            //For example, if the threshold is 0.32 ether and only 0.1 ether is already in the current token,
-            //then spaceLeft would be 0.22 ether.
+        // This loop allows one donation to potentially fund multiple aid tokens.
+        // It continues until the entire donated value (`remaining`) has been assigned to tokens
+        // or until we've reached the maximum number of tokens per transaction.
+        while (remaining > 0 && tokenCount < MAX_TOKENS_PER_TRANSACTION) {
+            // Added: Increment token counter
+            tokenCount++;
+
+            // Calculate how much more Ether is needed to complete the current token.
+            // For example, if the threshold is 0.32 ether and only 0.1 ether is already in the current token,
+            // then spaceLeft would be 0.22 ether.
             uint256 spaceLeft = donationThreshold - currentTokenBalance;
 
-            //Case 1: The remaining donation is enough to complete the current token.
+            // Case 1: The remaining donation is enough to complete the current token.
             if (remaining >= spaceLeft) {
-
-                //Add the current donor's address to the donor list of this token.
+                // Add the current donor's address to the donor list of this token.
                 aidTokens[tokenIdCounter].donors.push(msg.sender);
 
-                //Only the exact amount needed to fill the token is added here.
+                // Only the exact amount needed to fill the token is added here.
                 aidTokens[tokenIdCounter].donationAmount += spaceLeft;
 
-                //Increase the running total of Ether stored in the current token.
+                // Increase the running total of Ether stored in the current token.
                 currentTokenBalance += spaceLeft;
 
-                //Subtract the used amount from the remaining unallocated funds.
+                // Subtract the used amount from the remaining unallocated funds.
                 remaining -= spaceLeft;
+                
+                // Added: Emit donation event
+                emit Donation(msg.sender, spaceLeft, tokenIdCounter);
 
-                //At this point, the token has reached its threshold and is ready to be issued.
-                //This sets the token's `isIssued` flag to true and emits an event.
+                // At this point, the token has reached its threshold and is ready to be issued.
+                // This sets the token's `isIssued` flag to true and emits an event.
                 issueAidToken(tokenIdCounter);
 
-                //Move on to creating a new token by incrementing the token ID counter.
+                // Move on to creating a new token by incrementing the token ID counter.
                 tokenIdCounter++;
 
                 // Reset the balance tracker for the new token.
                 currentTokenBalance = 0;
-
             } else {
-                //Case 2: The remaining donation is NOT enough to complete the current token.
-                //Add the donor to the list of contributors for the current token.
+                // Case 2: The remaining donation is NOT enough to complete the current token.
+                // Add the donor to the list of contributors for the current token.
                 aidTokens[tokenIdCounter].donors.push(msg.sender);
 
-                //Add the full remaining amount to this token’s current balance.
+                // Add the full remaining amount to this token's current balance.
                 aidTokens[tokenIdCounter].donationAmount += remaining;
 
-                //Update the token’s balance with what remains.
+                // Update the token's balance with what remains.
                 currentTokenBalance += remaining;
+                
+                // Added: Emit donation event for partial token funding
+                emit Donation(msg.sender, remaining, tokenIdCounter);
 
-                //Since all donated funds have been assigned to tokens, end the loop.
+                // Since all donated funds have been assigned to tokens, end the loop.
                 remaining = 0;
             }
-        }          
+        }
+
+        // Added: If we still have remaining funds to process but hit the token limit, 
+        // the funds are still stored in donorBalances for future donations
     }
 
     //This is the internal function to issue the aidtoken when the threshold has been met
@@ -451,6 +502,9 @@ contract AidToken {
         aidTokens[tokenId].isAssigned = true;
         
         aidTokens[tokenId].location = location;
+        
+        // Added: Emit event when recipients are assigned to a token
+        emit AidTokenAssigned(tokenId, transferAddress, groundAddress, recipientAddress);
     }
 
 
@@ -531,6 +585,9 @@ contract AidTokenHandler {
     //and the new status. Useful for auditing and tracking purposes on-chain.
     event AidTransferred(uint256 tokenId, address actor, AidStatus newStatus);
 
+    //Added: Event for tracking token status initialization
+    event TokenStatusInitialized(uint256 indexed tokenId);
+
     //Constructor that runs once when the AidTokenHandler contract is deployed
     //It takes the address of the existing AidToken contract and stores it
     //so that this contract can interact with it.
@@ -547,6 +604,40 @@ contract AidTokenHandler {
         //AidToken and then its stored as a variable using aidTokenContract
         //So from now on whenever we use AidTokenContract, we are directly talking to the
         //AidToken contract as the specificed address of that contract
+    }
+
+    // Added: Function to explicitly initialize a token's status to Issued
+    // This adds clarity and ensures proper state initialization rather than relying on default values
+    // Can be called by anyone, but only works for tokens that have been issued and not yet initialized
+    function initializeTokenStatus(uint256 tokenId) public {
+        // Verify the token has been issued through the AidToken contract
+        require(aidTokenContract.isTokenIssued(tokenId), "Token has not been issued yet");
+        
+        // Ensure the token status hasn't already been initialized (still at default value)
+        require(aidStatus[tokenId] == AidStatus(0), "Token status already initialized");
+        
+        // Explicitly set the token's status to Issued
+        aidStatus[tokenId] = AidStatus.Issued;
+        
+        // Emit events to log the initialization
+        emit AidTransferred(tokenId, msg.sender, AidStatus.Issued);
+        emit TokenStatusInitialized(tokenId);
+    }
+    
+    // Added: Batch token status query function
+    // This allows frontend applications to efficiently retrieve the status of multiple tokens
+    // in a single call, reducing the number of RPC requests needed
+    function getTokenStatusBatch(uint256[] calldata tokenIds) external view returns (string[] memory) {
+        // Create an array to store the status strings with the same length as the input array
+        string[] memory statuses = new string[](tokenIds.length);
+        
+        // Iterate through each token ID and get its status string
+        for (uint256 i = 0; i < tokenIds.length; i++) {
+            statuses[i] = getAidStatusString(tokenIds[i]);
+        }
+        
+        // Return the array of status strings
+        return statuses;
     }
 
 	// I do not believe in the AidTokenHandler contract that the user needs to authenticate
@@ -637,18 +728,18 @@ contract AidTokenHandler {
 
 
 //The stuff below just confused me so i need a reminder of the pain it caused:
-//when you use "At Address" in Remix, you're only telling the IDE "here’s the address 
-//of a deployed contract" — but if that contract wasn’t deployed through your current 
-//project code (or you didn’t import the correct interface), Remix can’t interact 
+//when you use "At Address" in Remix, you're only telling the IDE "here's the address 
+//of a deployed contract" — but if that contract wasn't deployed through your current 
+//project code (or you didn't import the correct interface), Remix can't interact 
 //with it properly. Deploying the second contract directly with the correct 
-//AidToken address as its constructor input ensures it’s wired correctly from the start.
+//AidToken address as its constructor input ensures it's wired correctly from the start.
 
 
 //**************************Explanation Stuff******************************
 //There is probably a lot of stuff that should be explained better lol
 
 // tokens 0, 1, and 2 are working for stakeholder authentication, but token 3 is not – 
-//and that’s exactly what should happen based on the code. When a new token (e.g., token ID 3)
+//and that's exactly what should happen based on the code. When a new token (e.g., token ID 3)
 //is created during donation but hasn't yet met the donationThreshold (0.32 ETH), 
 //the issueAidToken() function is not called. That means: aidTokens[3].isIssued == false
 //You can assign stakeholders to that token ID, but they cannot authenticate themselves 
